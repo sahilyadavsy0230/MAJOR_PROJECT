@@ -1,0 +1,338 @@
+{% extends "dashboard_base.html" %}
+{% block title %}Live Field Supervisor GPS Tracker – Prashant Group Admin{% endblock %}
+
+{% block extra_css %}
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<style>
+  #trackerMap {
+    height: 640px;
+    width: 100%;
+    border-radius: var(--radius-md);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    border: 1px solid var(--ink-05);
+    z-index: 1;
+  }
+  .sup-list-item {
+    background: #fff;
+    border: 1px solid var(--ink-05);
+    border-radius: var(--radius-sm);
+    padding: 14px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .sup-list-item:hover, .sup-list-item.active {
+    border-color: var(--coral);
+    box-shadow: 0 4px 12px rgba(239,70,35,0.12);
+    transform: translateY(-2px);
+  }
+  .pulse-online {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #16A34A;
+    box-shadow: 0 0 0 rgba(22,163,74, 0.4);
+    animation: pulse 1.6s infinite;
+  }
+  .pulse-idle {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #D97706;
+  }
+  .pulse-offline {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #9CA3AF;
+  }
+  @keyframes pulse {
+    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(22,163,74, 0.7); }
+    70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(22,163,74, 0); }
+    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(22,163,74, 0); }
+  }
+  .custom-sup-marker {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #EF4623;
+    color: #fff;
+    font-size: 14px;
+    border-radius: 50%;
+    border: 3px solid #fff;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+</style>
+{% endblock %}
+
+{% block sidebar %}
+  <div class="sidebar-label">Main</div>
+  <a href="/dashboard/admin" class="sidebar-link"><i class="bi bi-speedometer2"></i> Overview</a>
+  <a href="/dashboard/admin/analytics" class="sidebar-link"><i class="bi bi-bar-chart-fill"></i> Analytics</a>
+  <div class="sidebar-label">Recruitment</div>
+  <a href="/dashboard/admin/jobs" class="sidebar-link"><i class="bi bi-briefcase"></i> Jobs &amp; Applications</a>
+  <a href="/dashboard/admin/candidates" class="sidebar-link"><i class="bi bi-people"></i> Candidates</a>
+  <a href="/dashboard/admin/workers" class="sidebar-link"><i class="bi bi-person-badge"></i> Workers</a>
+  <div class="sidebar-label">Management</div>
+  <a href="/dashboard/admin/supervisors" class="sidebar-link active"><i class="bi bi-person-gear"></i> Supervisors</a>
+{% endblock %}
+
+{% block content %}
+<div class="dash-header">
+  <div>
+    <a href="/dashboard/admin/supervisors" style="font-size:13px;color:var(--ink-60);font-weight:600;"><i class="bi bi-arrow-left"></i> Back to Supervisors List</a>
+    <h1 class="dash-title mt-1">Live Supervisor GPS Tracker</h1>
+    <p style="margin: 4px 0 0; color: var(--ink-60); font-size: 13px;">
+      Real-time field location tracking for all active Prashant Group supervisors across industrial sites &amp; plant locations.
+    </p>
+  </div>
+  <div class="d-flex align-items-center gap-2">
+    <span id="lastUpdatedBadge" style="font-size:12px;color:var(--ink-60);"><i class="bi bi-clock me-1"></i> Syncing...</span>
+    <button onclick="fetchLocations()" class="btn-secondary" style="padding:8px 14px;font-size:12px;">
+      <i class="bi bi-arrow-clockwise me-1"></i> Refresh Map
+    </button>
+  </div>
+</div>
+
+<!-- Stats Counter Bar -->
+<div class="row g-3 mb-4">
+  <div class="col-md-3 col-6">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:var(--ink-05);color:var(--ink);"><i class="bi bi-person-gear"></i></div>
+      <div class="stat-val" id="statTotalSupervisors">0</div>
+      <div class="stat-lbl">Active Supervisors</div>
+    </div>
+  </div>
+  <div class="col-md-3 col-6">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#EBF8F2;color:#16A34A;"><i class="bi bi-geo-alt-fill"></i></div>
+      <div class="stat-val" id="statOnlineSupervisors" style="color:#16A34A;">0</div>
+      <div class="stat-lbl">Online Live Now</div>
+    </div>
+  </div>
+  <div class="col-md-3 col-6">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:var(--ink-05);color:var(--coral);"><i class="bi bi-buildings"></i></div>
+      <div class="stat-val" id="statCoveredSites">0</div>
+      <div class="stat-lbl">Industrial Sites Covered</div>
+    </div>
+  </div>
+  <div class="col-md-3 col-6">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#FEF3C7;color:#D97706;"><i class="bi bi-clipboard-check-fill"></i></div>
+      <div class="stat-val" id="statTodayAttendanceTaken" style="color:#D97706;">0</div>
+      <div class="stat-lbl">Today's Attendance Logs</div>
+    </div>
+  </div>
+</div>
+
+<!-- Map and Supervisor List Grid -->
+<div class="row g-3">
+  <!-- Map Column -->
+  <div class="col-lg-8">
+    <div class="content-card" style="padding: 10px;">
+      <div id="trackerMap"></div>
+    </div>
+  </div>
+
+  <!-- Supervisor Cards Sidebar -->
+  <div class="col-lg-4">
+    <div class="content-card h-100 d-flex flex-column">
+      <div class="content-card-header d-flex justify-content-between align-items-center" style="padding:1rem 1.25rem;">
+        <h6 style="margin:0;font-weight:700;"><i class="bi bi-people-fill text-coral me-2"></i> Field Supervisors</h6>
+        <select id="filterStatus" class="pg-input" style="padding:4px 8px;font-size:12px;width:auto;" onchange="renderSupervisorList()">
+          <option value="ALL">All Statuses</option>
+          <option value="ONLINE">Online Only</option>
+        </select>
+      </div>
+      <div class="content-card-body" id="supervisorListSidebar" style="overflow-y:auto;max-height:560px;padding:12px;">
+        <div style="text-align:center;padding:2rem;color:var(--ink-60);font-size:13px;">Loading supervisors...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+<script>
+let map = null;
+let markers = {};
+let supervisorData = [];
+let defaultCenter = [18.5204, 73.8567]; // Pune default
+let mapInitialized = false;
+
+function initMap() {
+  if (mapInitialized) return;
+  map = L.map('trackerMap').setView(defaultCenter, 11);
+
+  // OpenStreetMap Layer
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors | Prashant Group'
+  }).addTo(map);
+
+  mapInitialized = true;
+}
+
+async function fetchLocations() {
+  const data = await apiGet('/api/v1/admin/supervisors/live-locations');
+  if (!data) return;
+  supervisorData = data;
+
+  document.getElementById('lastUpdatedBadge').innerHTML = `<i class="bi bi-clock-history text-coral me-1"></i> Updated at ${new Date().toLocaleTimeString()}`;
+
+  // Update KPI counters
+  const onlineCount = data.filter(s => s.is_online).length;
+  const sites = new Set(data.map(s => s.assigned_location || s.assigned_company)).size;
+  const totalAtt = data.reduce((sum, s) => sum + (s.today_attendance_count || 0), 0);
+
+  document.getElementById('statTotalSupervisors').textContent = data.length;
+  document.getElementById('statOnlineSupervisors').textContent = onlineCount;
+  document.getElementById('statCoveredSites').textContent = sites;
+  document.getElementById('statTodayAttendanceTaken').textContent = totalAtt;
+
+  renderMarkers();
+  renderSupervisorList();
+}
+
+function renderMarkers() {
+  if (!map) initMap();
+
+  // Clear previous markers
+  Object.values(markers).forEach(m => map.removeLayer(m));
+  markers = {};
+
+  const bounds = [];
+
+  supervisorData.forEach(s => {
+    const lat = parseFloat(s.last_seen_lat || s.site_latitude);
+    const lng = parseFloat(s.last_seen_lng || s.site_longitude);
+
+    if (!isNaN(lat) && !isNaN(lng)) {
+      bounds.push([lat, lng]);
+
+      const statusColor = s.is_online ? '#16A34A' : (s.minutes_ago !== null && s.minutes_ago <= 30 ? '#D97706' : '#EF4623');
+      const statusText = s.is_online ? '🟢 Live Active' : (s.minutes_ago !== null ? `🟡 Active ${s.minutes_ago}m ago` : '🔴 Offline / Site GPS');
+
+      const customIcon = L.divIcon({
+        className: 'custom-sup-marker',
+        html: `<div style="background:${statusColor};width:36px;height:36px;border-radius:50%;border:3px solid #fff;display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;box-shadow:0 4px 12px rgba(0,0,0,0.3);"><i class="bi bi-person-fill"></i></div>`,
+        iconSize: [36, 36],
+        iconAnchor: [18, 18],
+        popupAnchor: [0, -18]
+      });
+
+      const popupContent = `
+        <div style="font-family:inherit;min-width:240px;padding:4px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+            <strong style="font-size:14px;color:var(--ink);">${escapeHtml(s.name)}</strong>
+            <span style="font-size:11px;font-weight:700;color:${statusColor};">${statusText}</span>
+          </div>
+          <div style="font-size:12px;color:var(--ink-60);display:flex;flex-direction:column;gap:4px;margin-bottom:8px;">
+            <span><i class="bi bi-building me-1 text-coral"></i> <strong>Company:</strong> ${escapeHtml(s.assigned_company)}</span>
+            <span><i class="bi bi-geo-alt-fill me-1 text-coral"></i> <strong>Assigned Site:</strong> ${escapeHtml(s.assigned_location)}</span>
+            <span><i class="bi bi-telephone me-1 text-coral"></i> ${escapeHtml(s.phone)}</span>
+            <span><i class="bi bi-people me-1 text-coral"></i> <strong>Workforce:</strong> ${s.total_assigned_workers} workers</span>
+            <span><i class="bi bi-clipboard-check me-1 text-coral"></i> <strong>Today's Attendance:</strong> ${s.today_attendance_count} marked</span>
+          </div>
+          <div style="border-top:1px solid var(--ink-05);padding-top:8px;display:flex;gap:6px;">
+            <a href="https://www.google.com/maps?q=${lat},${lng}" target="_blank" class="btn-secondary" style="padding:4px 8px;font-size:11px;flex:1;text-align:center;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:4px;">
+              <i class="bi bi-map-fill text-coral"></i> Google Maps
+            </a>
+            <a href="/dashboard/admin/supervisors" class="btn-secondary" style="padding:4px 8px;font-size:11px;flex:1;text-align:center;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:4px;">
+              <i class="bi bi-person-gear"></i> Manage
+            </a>
+          </div>
+        </div>
+      `;
+
+      const marker = L.marker([lat, lng], { icon: customIcon }).addTo(map);
+      marker.bindPopup(popupContent);
+      markers[s.id] = marker;
+    }
+  });
+
+  if (bounds.length > 0) {
+    map.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 });
+  }
+}
+
+function renderSupervisorList() {
+  const filter = document.getElementById('filterStatus').value;
+  const listEl = document.getElementById('supervisorListSidebar');
+
+  let list = supervisorData;
+  if (filter === 'ONLINE') {
+    list = list.filter(s => s.is_online);
+  }
+
+  if (!list.length) {
+    listEl.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--ink-60);font-size:13px;">No supervisors found for this filter.</div>';
+    return;
+  }
+
+  listEl.innerHTML = list.map(s => {
+    const lat = parseFloat(s.last_seen_lat || s.site_latitude);
+    const lng = parseFloat(s.last_seen_lng || s.site_longitude);
+    const hasGPS = !isNaN(lat) && !isNaN(lng);
+
+    const pulseClass = s.is_online ? 'pulse-online' : (s.minutes_ago !== null && s.minutes_ago <= 30 ? 'pulse-idle' : 'pulse-offline');
+    const statusLabel = s.is_online ? 'Live Online' : (s.minutes_ago !== null ? `${s.minutes_ago}m ago` : 'Offline');
+
+    return `
+      <div class="sup-list-item" onclick="focusSupervisor(${s.id}, ${lat}, ${lng})">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">
+          <div style="font-weight:700;font-size:14px;color:var(--ink);">${escapeHtml(s.name)}</div>
+          <span style="font-size:11px;display:flex;align-items:center;gap:5px;font-weight:600;color:var(--ink-60);">
+            <span class="${pulseClass}"></span> ${statusLabel}
+          </span>
+        </div>
+        <div style="font-size:12px;color:var(--ink-60);margin-bottom:8px;">
+          <div><i class="bi bi-building me-1 text-coral"></i> <strong>${escapeHtml(s.assigned_company)}</strong></div>
+          <div><i class="bi bi-geo-alt me-1 text-coral"></i> ${escapeHtml(s.assigned_location)}</div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--ink-60);border-top:1px dashed var(--ink-05);padding-top:6px;">
+          <span>Workforce: <strong>${s.total_assigned_workers}</strong></span>
+          <span>Attendance: <strong class="text-coral">${s.today_attendance_count}</strong></span>
+          ${hasGPS ? `
+            <a href="https://www.google.com/maps?q=${lat},${lng}" target="_blank" onclick="event.stopPropagation()" style="color:var(--coral);font-weight:600;text-decoration:none;">
+              <i class="bi bi-box-arrow-up-right"></i> Maps
+            </a>
+          ` : '<span style="color:#9CA3AF;">No GPS</span>'}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function focusSupervisor(supId, lat, lng) {
+  if (!map) return;
+  if (!isNaN(lat) && !isNaN(lng)) {
+    map.flyTo([lat, lng], 15, { animate: true, duration: 1.2 });
+    if (markers[supId]) {
+      setTimeout(() => { markers[supId].openPopup(); }, 1200);
+    }
+  } else {
+    alert('No GPS coordinates recorded yet for this supervisor.');
+  }
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return str.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+// Initial Load & Auto-polling every 15 seconds
+initMap();
+fetchLocations();
+setInterval(fetchLocations, 15000);
+</script>
+{% endblock %}

@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Dashboard – Prashant Group{% endblock %}</title>
+
+  <!-- Google Fonts FIRST -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+  <!-- Red Sun CSS — LAST to override Bootstrap -->
+  <link rel="stylesheet" href="/static/css/style.css">
+
+  <style>
+    /* Dashboard-specific overrides */
+    body { background-color: #f7f8fa !important; }
+    * { box-sizing: border-box; }
+  </style>
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+  <!-- ── SIDEBAR ─────────────────────────────────────────── -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark">P</div>
+      <span>Prashant Group</span>
+    </div>
+
+    {% block sidebar %}{% endblock %}
+
+    <div class="sidebar-bottom">
+      <button onclick="logout()" class="sidebar-link" style="width:100%;">
+        <i class="bi bi-box-arrow-right"></i> Logout
+      </button>
+    </div>
+  </aside>
+
+  <!-- ── MAIN CONTENT ─────────────────────────────────────── -->
+  <div class="main-content">
+    {% block content %}{% endblock %}
+  </div>
+
+  <!-- Bootstrap 5 JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    /* ── Auth helpers ──────────────────────────────────── */
+    async function logout() {
+      const t = localStorage.getItem('token');
+      if (t) {
+        try {
+          await fetch('/api/v1/auth/logout', {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + t }
+          });
+        } catch (e) {
+          console.error('Logout error:', e);
+        }
+      }
+      localStorage.removeItem('token');
+      window.location.href = '/login';
+    }
+
+    function getToken() {
+      const t = localStorage.getItem('token');
+      if (!t) { window.location.href = '/login'; return null; }
+      return t;
+    }
+
+    function authHeaders() {
+      const t = getToken();
+      return t ? { 'Authorization': 'Bearer ' + t } : {};
+    }
+
+    async function apiGet(url) {
+      const token = getToken();
+      if (!token) return null;
+      try {
+        const res = await fetch(url, { headers: { 'Authorization': 'Bearer ' + token } });
+        if (res.status === 401 || res.status === 403) {
+          alert('Session expired or access denied. Please log in again.');
+          localStorage.removeItem('token');
+          window.location.href = '/login';
+          return null;
+        }
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({ detail: 'Server error' }));
+          alert('Error: ' + (err.detail || 'Unknown error'));
+          return null;
+        }
+        return await res.json();
+      } catch (e) {
+        alert('Network error: ' + e.message);
+        return null;
+      }
+    }
+
+    async function apiPost(url, formData, method = 'POST') {
+      const token = getToken();
+      if (!token) return null;
+      try {
+        const res = await fetch(url, {
+          method,
+          headers: { 'Authorization': 'Bearer ' + token },
+          body: formData
+        });
+        if (res.status === 401 || res.status === 403) {
+          alert('Access denied.');
+          return null;
+        }
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({ detail: 'Server error' }));
+          alert('Error: ' + (err.detail || 'Operation failed'));
+          return null;
+        }
+        return await res.json();
+      } catch (e) {
+        alert('Network error: ' + e.message);
+        return null;
+      }
+    }
+
+    async function apiPatch(url, formData) {
+      return apiPost(url, formData, 'PATCH');
+    }
+
+    // Mark active sidebar link
+    document.querySelectorAll('.sidebar-link').forEach(link => {
+      if (link.href && link.href === window.location.href) {
+        link.classList.add('active');
+      }
+    });
+  </script>
+
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

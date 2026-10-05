@@ -1,0 +1,100 @@
+{% extends "dashboard_base.html" %}
+{% block title %}My Dashboard – Prashant Group{% endblock %}
+
+{% block sidebar %}
+  <div class="sidebar-label">My Account</div>
+  <a href="/dashboard/candidate" class="sidebar-link active"><i class="bi bi-speedometer2"></i> My Applications</a>
+  <a href="/jobs" class="sidebar-link"><i class="bi bi-briefcase"></i> Browse Jobs</a>
+{% endblock %}
+
+{% block content %}
+<div class="dash-header">
+  <h1 class="dash-title">My Applications</h1>
+  <a href="/jobs" class="btn-primary"><i class="bi bi-search"></i> Find Jobs</a>
+</div>
+
+<!-- Profile Summary -->
+<div class="content-card mb-4" id="profileCard">
+  <div class="content-card-body" style="color:var(--ink-60);">Loading...</div>
+</div>
+
+<!-- Applications -->
+<div class="content-card">
+  <div class="content-card-header">
+    <h5 style="margin:0; font-family:var(--font-serif);">Application History</h5>
+  </div>
+  <div class="content-card-body" id="appsList">
+    <div class="text-center py-4" style="color:var(--ink-60);">Loading...</div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+async function loadDashboard() {
+  const [profile, apps] = await Promise.all([
+    apiGet('/api/v1/auth/me'),
+    apiGet('/api/v1/jobs/my/applications'),
+  ]);
+
+  if (profile && profile.profile) {
+    const p = profile.profile;
+    document.getElementById('profileCard').innerHTML = `
+      <div class="content-card-body d-flex align-items-center gap-4 flex-wrap">
+        <div class="candidate-avatar" style="width:72px;height:72px;border-radius:14px;font-size:2.5rem;">
+          ${p.profile_photo ? `<img src="/${p.profile_photo}" style="width:100%;height:100%;object-fit:cover;">` : '<i class="bi bi-person-fill"></i>'}
+        </div>
+        <div>
+          <h4 style="margin:0 0 4px;">${p.full_name}</h4>
+          <p style="margin:0 0 8px;font-size:14px;color:var(--ink-60);">${p.phone} · ${profile.email}</p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            ${p.city ? `<span class="badge-peach"><i class="bi bi-geo-alt"></i> ${p.city}</span>` : ''}
+            ${p.qualification ? `<span class="badge-peach"><i class="bi bi-mortarboard"></i> ${p.qualification}</span>` : ''}
+            ${p.preferred_job ? `<span class="badge-peach"><i class="bi bi-briefcase"></i> ${p.preferred_job}</span>` : ''}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  if (apps !== null) {
+    const el = document.getElementById('appsList');
+    if (!apps.length) {
+      el.innerHTML = `
+        <div class="text-center py-5">
+          <i class="bi bi-inbox" style="font-size:3rem;color:var(--ink-60);"></i>
+          <h5 style="margin:1rem 0 0.5rem;">No Applications Yet</h5>
+          <p style="color:var(--ink-60);font-size:14px;">Browse available jobs and submit your first application.</p>
+          <a href="/jobs" class="btn-primary mt-2"><i class="bi bi-briefcase"></i> Browse Jobs</a>
+        </div>`;
+      return;
+    }
+
+    el.innerHTML = apps.map(a => `
+      <div style="padding:1.25rem 0;border-bottom:1px solid var(--ink-05);">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;">
+          <div>
+            <h5 style="margin:0 0 4px;font-size:1rem;">${a.job.title}</h5>
+            <p style="margin:0;font-size:13px;color:var(--ink-60);">${a.job.company} · ${a.job.role}</p>
+            <p style="margin:4px 0 0;font-size:12px;color:var(--ink-60);">Applied: ${a.applied_date ? a.applied_date.split('T')[0] : '—'}</p>
+          </div>
+          <span class="status-pill status-${a.status.toLowerCase()}">${a.status}</span>
+        </div>
+        ${a.interview ? `
+        <div style="margin-top:0.75rem;padding:0.75rem;background:rgba(168,85,247,0.05);border-radius:12px;border:1px solid rgba(168,85,247,0.15);">
+          <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#9333ea;margin-bottom:6px;"><i class="bi bi-calendar-event me-1"></i>Interview Scheduled</div>
+          <div style="font-size:13px;">HR: <strong>${a.interview.hr_name}</strong> · Date: <strong>${a.interview.date}</strong> · Time: <strong>${a.interview.time}</strong></div>
+        </div>` : ''}
+        ${a.deployment ? `
+        <div style="margin-top:0.75rem;padding:0.75rem;background:rgba(34,197,94,0.05);border-radius:12px;border:1px solid rgba(34,197,94,0.15);">
+          <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#16a34a;margin-bottom:6px;"><i class="bi bi-check-circle-fill me-1"></i>Deployed as Worker</div>
+          <div style="font-size:13px;">Worker ID: <strong>${a.deployment.worker_id_str}</strong> · ${a.deployment.company} · ${a.deployment.job_role}</div>
+        </div>` : ''}
+      </div>
+    `).join('') + '<div style="padding-top:0.5rem;"></div>';
+  }
+}
+
+loadDashboard();
+</script>
+{% endblock %}

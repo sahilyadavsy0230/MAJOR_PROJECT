@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% block title %}Contact Us – Prashant Group{% endblock %}
+
+{% block content %}
+<!-- Page Hero -->
+<section class="page-hero">
+  <div class="container text-center reveal">
+    <div class="hero-badge" style="background: rgba(253, 241, 238, 0.1); color: var(--peach); border-color: rgba(239, 70, 35, 0.3);">
+      <i class="bi bi-headset"></i> Support & Inquiries
+    </div>
+    <h1 style="font-size: clamp(2.8rem, 6vw, 5rem); margin-bottom: 1rem;">
+      Get in Touch with<br><em>Our Team</em>
+    </h1>
+    <p style="font-size: 1.1rem; max-width: 600px; margin: 0 auto;">
+      We're here to assist candidate job seekers, deployed workers, and client companies.
+    </p>
+  </div>
+</section>
+
+<!-- Contact Form and Details -->
+<section class="section">
+  <div class="container">
+    <div class="row g-5">
+      
+      <!-- Contact Info Cards -->
+      <div class="col-lg-5 reveal">
+        <div class="section-eyebrow">Corporate Office</div>
+        <h2 class="section-heading mb-4">We're always here<br><em>to assist you</em></h2>
+        
+        <div class="d-flex flex-column gap-4 mt-4">
+          <div class="bento-card" style="padding: 1.75rem;">
+            <div class="d-flex align-items-start gap-3">
+              <div class="icon-box"><i class="bi bi-geo-alt-fill"></i></div>
+              <div>
+                <h5 style="font-size: 1.1rem; margin-bottom: 4px;">Head Office</h5>
+                <p style="font-size: 14px; color: var(--ink-60); margin: 0; line-height: 1.6;">
+                  Office No 217, Metropol Building,<br>
+                  Dange Chowk, Thergaon,<br>
+                  Pune, Maharashtra – 411033
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div class="bento-card" style="padding: 1.75rem;">
+            <div class="d-flex align-items-start gap-3">
+              <div class="icon-box"><i class="bi bi-telephone-fill"></i></div>
+              <div>
+                <h5 style="font-size: 1.1rem; margin-bottom: 4px;">Helpline & Support</h5>
+                <p style="font-size: 14px; color: var(--ink-60); margin: 0; line-height: 1.6;">
+                  +91 9922475940<br>
+                  +91 9595362611<br>
+                  <span style="font-size: 12px; color: var(--ink-60);">Mon – Sat: 9:00 AM – 7:00 PM</span>
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div class="bento-card" style="padding: 1.75rem;">
+            <div class="d-flex align-items-start gap-3">
+              <div class="icon-box"><i class="bi bi-envelope-fill"></i></div>
+              <div>
+                <h5 style="font-size: 1.1rem; margin-bottom: 4px;">Email Support</h5>
+                <p style="font-size: 14px; color: var(--ink-60); margin: 0; line-height: 1.6;">
+                  info@prashantgroupindia.in<br>
+                  hr@prashantgroupindia.in
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Contact Message Form -->
+      <div class="col-lg-7 reveal">
+        <div class="content-card" style="padding: 3rem; border-radius: var(--radius-lg);">
+          <h3 style="font-family: var(--font-serif); font-size: 2rem; margin-bottom: 0.5rem;">Send an Inquiry</h3>
+          <p style="font-size: 14px; color: var(--ink-60); margin-bottom: 2rem;">Fill out the form below and an HR representative will get back to you shortly.</p>
+
+          <div id="contactAlert" class="pg-alert d-none"></div>
+
+          <form id="contactForm">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="pg-form-label">Your Name *</label>
+                <input type="text" name="name" class="pg-input" placeholder="e.g. Amit Patil" required>
+              </div>
+
+              <div class="col-md-6">
+                <label class="pg-form-label">Phone Number *</label>
+                <input type="tel" name="phone" class="pg-input" placeholder="10-digit number" required>
+              </div>
+
+              <div class="col-md-6">
+                <label class="pg-form-label">Email Address *</label>
+                <input type="email" name="email" class="pg-input" placeholder="name@domain.com" required>
+              </div>
+
+              <div class="col-md-6">
+                <label class="pg-form-label">I am a... *</label>
+                <select name="subject" class="pg-input" required>
+                  <option value="Job Seeker">Job Seeker / Candidate</option>
+                  <option value="Client Company">Company Looking for Manpower</option>
+                  <option value="Supervisor Inquiry">Supervisor Inquiry</option>
+                  <option value="Other">Other Inquiry</option>
+                </select>
+              </div>
+
+              <div class="col-12">
+                <label class="pg-form-label">Message / Requirement Details *</label>
+                <textarea name="message" class="pg-input" rows="4" placeholder="How can we help you?" required></textarea>
+              </div>
+            </div>
+
+            <button type="submit" id="contactBtn" class="btn-primary w-100 mt-4" style="width: 100%; justify-content: center; padding: 14px;">
+              <i class="bi bi-send-fill"></i> Send Message
+            </button>
+          </form>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('contactForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const alertEl = document.getElementById('contactAlert');
+  const btn = document.getElementById('contactBtn');
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Sending...';
+
+  setTimeout(() => {
+    alertEl.className = 'pg-alert pg-alert-success';
+    alertEl.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i> Thank you! Your inquiry has been received. Our team will contact you within 24 business hours.';
+    alertEl.classList.remove('d-none');
+    e.target.reset();
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-send-fill"></i> Send Message';
+  }, 600);
+});
+</script>
+{% endblock %}

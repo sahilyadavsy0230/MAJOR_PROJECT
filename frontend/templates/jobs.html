@@ -1,0 +1,255 @@
+{% extends "base.html" %}
+{% block title %}Job Opportunities – Prashant Group{% endblock %}
+
+{% block content %}
+<!-- Page Hero -->
+<section class="page-hero">
+  <div class="container text-center reveal">
+    <div class="hero-badge" style="background: rgba(253, 241, 238, 0.1); color: var(--peach); border-color: rgba(239, 70, 35, 0.3);">
+      <i class="bi bi-briefcase-fill"></i> Career Opportunities
+    </div>
+    <h1 style="font-size: clamp(2.8rem, 6vw, 5rem); margin-bottom: 1rem;">
+      Industrial & Non-Technical<br><em>Openings</em>
+    </h1>
+    <p style="font-size: 1.1rem; max-width: 600px; margin: 0 auto;">
+      Explore verified openings across top manufacturing, automotive, and logistics hubs.
+    </p>
+  </div>
+</section>
+
+<!-- Filter & Jobs Container -->
+<section class="section" style="padding-top: 3.5rem;">
+  <div class="container">
+    
+    <!-- Filter bar -->
+    <div class="content-card mb-5 reveal" style="padding: 1.5rem; border-radius: var(--radius-md);">
+      <div class="row g-3 align-items-center">
+        <div class="col-lg-5 col-md-6">
+          <div style="position: relative;">
+            <i class="bi bi-search" style="position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--ink-60);"></i>
+            <input type="text" id="jobSearch" class="pg-input" placeholder="Search by role, company, or location..." style="padding-left: 44px;" oninput="filterJobs()">
+          </div>
+        </div>
+        <div class="col-lg-4 col-md-6">
+          <select id="roleFilter" class="pg-input" onchange="filterJobs()">
+            <option value="">All Job Roles</option>
+            <option value="Picker">Picker</option>
+            <option value="Packer">Packer</option>
+            <option value="Loader">Loader</option>
+            <option value="Driver">Driver</option>
+            <option value="Delivery Boy">Delivery Boy</option>
+            <option value="Security Guard">Security Guard</option>
+            <option value="Warehouse Worker">Warehouse Worker</option>
+            <option value="Helper">Helper</option>
+          </select>
+        </div>
+        <div class="col-lg-3 col-md-12 text-lg-end">
+          <span id="jobCountBadge" class="badge-peach" style="font-size: 13px; padding: 10px 16px;">
+            Loading positions...
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Jobs Grid -->
+    <div class="row g-4" id="jobsContainer">
+      <div class="col-12 text-center py-5" style="color: var(--ink-60);">
+        <div style="width: 40px; height: 40px; border: 3px solid var(--coral); border-top-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 1rem;"></div>
+        Loading available opportunities...
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- Apply Confirmation Modal -->
+<div id="applyModal" style="display: none; position: fixed; inset: 0; background: rgba(45, 59, 66, 0.6); backdrop-filter: blur(4px); z-index: 9999; align-items: center; justify-content: center; padding: 1rem;">
+  <div style="background: #fff; border-radius: var(--radius-lg); padding: 2.5rem; max-width: 500px; width: 100%;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem;">
+      <div>
+        <span class="badge-peach mb-2">Job Application</span>
+        <h3 id="modalJobTitle" style="margin: 0; font-family: var(--font-serif); font-size: 1.75rem;">Confirm Application</h3>
+        <p id="modalJobCompany" style="margin: 0; color: var(--ink-60); font-size: 14px;"></p>
+      </div>
+      <button onclick="closeApplyModal()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--ink-60);">&times;</button>
+    </div>
+
+    <div class="pg-alert pg-alert-info" style="font-size: 13px;">
+      <i class="bi bi-info-circle-fill me-2"></i>
+      Your candidate profile information and verified documents will be attached to this application for Prashant Group HR review.
+    </div>
+
+    <div id="modalAlert" class="pg-alert d-none"></div>
+
+    <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+      <button onclick="closeApplyModal()" class="btn-secondary" style="flex: 1; justify-content: center;">Cancel</button>
+      <button id="confirmApplyBtn" onclick="submitApplication()" class="btn-primary" style="flex: 1; justify-content: center;">
+        <i class="bi bi-send-fill"></i> Submit Application
+      </button>
+    </div>
+  </div>
+</div>
+
+<style>
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let allJobs = [];
+let selectedJobId = null;
+
+async function fetchJobs() {
+  try {
+    const res = await fetch('/api/v1/jobs/');
+    if (!res.ok) throw new Error('Failed to fetch jobs');
+    allJobs = await res.json();
+    renderJobs(allJobs);
+  } catch (err) {
+    document.getElementById('jobsContainer').innerHTML = `
+      <div class="col-12 text-center py-5 text-danger">
+        <i class="bi bi-exclamation-circle display-4"></i>
+        <p class="mt-3">Unable to load job opportunities at this moment.</p>
+      </div>
+    `;
+  }
+}
+
+function renderJobs(jobs) {
+  const container = document.getElementById('jobsContainer');
+  const countBadge = document.getElementById('jobCountBadge');
+  countBadge.textContent = `${jobs.length} Open Position${jobs.length !== 1 ? 's' : ''}`;
+
+  if (!jobs.length) {
+    container.innerHTML = `
+      <div class="col-12 text-center py-5" style="color: var(--ink-60);">
+        <i class="bi bi-search" style="font-size: 3rem; opacity: 0.5;"></i>
+        <h4 class="mt-3">No matching openings found</h4>
+        <p style="font-size: 14px;">Try searching with different keywords or role filters.</p>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = jobs.map(j => `
+    <div class="col-lg-4 col-md-6">
+      <div class="job-card">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+          <span class="badge-peach">${j.role}</span>
+          <span class="${j.vacancies > 0 ? 'badge-success' : 'status-pill status-rejected'}">
+            ${j.vacancies > 0 ? `${j.vacancies} Vacancies` : 'Filled'}
+          </span>
+        </div>
+
+        <h3 style="font-size: 1.5rem; margin-bottom: 4px;">${j.title}</h3>
+        <div style="color: var(--ink-60); font-size: 14px; margin-bottom: 1rem; display: flex; align-items: center; gap: 6px;">
+          <i class="bi bi-building"></i> <strong>${j.company}</strong>
+        </div>
+
+        <div class="job-card-meta">
+          <span><i class="bi bi-geo-alt text-coral"></i> ${j.location}</span>
+          <span><i class="bi bi-cash text-coral"></i> ${j.salary || 'Competitive'}</span>
+          <span><i class="bi bi-clock text-coral"></i> ${j.shift || 'Flexible'} Shift</span>
+          <span><i class="bi bi-mortarboard text-coral"></i> ${j.qualification || 'Minimum 10th Pass'}</span>
+        </div>
+
+        ${j.description ? `<p style="font-size: 13px; color: var(--ink-60); margin: 0.75rem 0 1.25rem; line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${j.description}</p>` : ''}
+
+        <div style="margin-top: auto; padding-top: 1rem; border-top: 1px solid var(--ink-05);">
+          ${j.vacancies > 0 ? `
+            <button onclick="openApplyModal(${j.id}, '${j.title.replace(/'/g, "\\'")}', '${j.company.replace(/'/g, "\\'")}')" class="btn-primary w-100" style="width: 100%; justify-content: center;">
+              <i class="bi bi-arrow-right-circle"></i> Apply Now
+            </button>
+          ` : `
+            <button disabled class="btn-secondary w-100" style="width: 100%; justify-content: center; opacity: 0.6; cursor: not-allowed;">
+              Position Filled
+            </button>
+          `}
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function filterJobs() {
+  const query = document.getElementById('jobSearch').value.toLowerCase().trim();
+  const role = document.getElementById('roleFilter').value;
+
+  const filtered = allJobs.filter(j => {
+    const matchQuery = (j.title.toLowerCase().includes(query) ||
+                        j.company.toLowerCase().includes(query) ||
+                        j.location.toLowerCase().includes(query) ||
+                        j.role.toLowerCase().includes(query));
+    const matchRole = role ? j.role === role : true;
+    return matchQuery && matchRole;
+  });
+
+  renderJobs(filtered);
+}
+
+function openApplyModal(jobId, title, company) {
+  const token = localStorage.getItem('token');
+  if (!token) {
+    alert('Please sign in or register as a candidate before applying.');
+    window.location.href = '/login';
+    return;
+  }
+
+  selectedJobId = jobId;
+  document.getElementById('modalJobTitle').textContent = title;
+  document.getElementById('modalJobCompany').textContent = company;
+  document.getElementById('modalAlert').className = 'pg-alert d-none';
+  document.getElementById('applyModal').style.display = 'flex';
+}
+
+function closeApplyModal() {
+  document.getElementById('applyModal').style.display = 'none';
+  selectedJobId = null;
+}
+
+async function submitApplication() {
+  if (!selectedJobId) return;
+  const token = localStorage.getItem('token');
+  const alertEl = document.getElementById('modalAlert');
+  const btn = document.getElementById('confirmApplyBtn');
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Submitting...';
+  alertEl.className = 'pg-alert d-none';
+
+  try {
+    const res = await fetch(`/api/v1/jobs/${selectedJobId}/apply`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    const data = await res.json();
+    if (res.ok) {
+      alertEl.className = 'pg-alert pg-alert-success';
+      alertEl.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i> Application submitted successfully!';
+      alertEl.classList.remove('d-none');
+      setTimeout(() => {
+        closeApplyModal();
+        window.location.href = '/dashboard/candidate';
+      }, 1000);
+    } else {
+      alertEl.className = 'pg-alert pg-alert-error';
+      alertEl.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-2"></i> ' + (data.detail || 'Application failed.');
+      alertEl.classList.remove('d-none');
+    }
+  } catch (err) {
+    alertEl.className = 'pg-alert pg-alert-error';
+    alertEl.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-2"></i> Error connecting to server.';
+    alertEl.classList.remove('d-none');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-send-fill"></i> Submit Application';
+  }
+}
+
+fetchJobs();
+</script>
+{% endblock %}

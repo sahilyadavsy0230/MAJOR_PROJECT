@@ -1,0 +1,148 @@
+{% extends "dashboard_base.html" %}
+{% block title %}Deploy Candidate – Admin{% endblock %}
+
+{% block sidebar %}
+  <div class="sidebar-label">Main</div>
+  <a href="/dashboard/admin" class="sidebar-link"><i class="bi bi-speedometer2"></i> Overview</a>
+  <a href="/dashboard/admin/analytics" class="sidebar-link"><i class="bi bi-bar-chart-fill"></i> Analytics</a>
+  <div class="sidebar-label">Recruitment</div>
+  <a href="/dashboard/admin/jobs" class="sidebar-link active"><i class="bi bi-briefcase"></i> Jobs & Applications</a>
+  <a href="/dashboard/admin/candidates" class="sidebar-link"><i class="bi bi-people"></i> Candidates</a>
+  <a href="/dashboard/admin/workers" class="sidebar-link"><i class="bi bi-person-badge"></i> Workers</a>
+  <div class="sidebar-label">Management</div>
+  <a href="/dashboard/admin/supervisors" class="sidebar-link"><i class="bi bi-person-gear"></i> Supervisors</a>
+{% endblock %}
+
+{% block content %}
+<div class="dash-header">
+  <div>
+    <a href="javascript:history.back()" style="font-size:13px;color:var(--ink-60);font-weight:600;"><i class="bi bi-arrow-left"></i> Back</a>
+    <h1 class="dash-title mt-1">Deploy Candidate as Worker</h1>
+  </div>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+
+    <!-- Candidate Summary -->
+    <div class="content-card mb-4" id="candidateSummary">
+      <div class="content-card-body text-center" style="color:var(--ink-60);">Loading candidate...</div>
+    </div>
+
+    <!-- Deployment Form -->
+    <div class="content-card">
+      <div class="content-card-header">
+        <h5 style="margin:0; font-family:var(--font-serif);"><i class="bi bi-send me-2" style="color:var(--coral);"></i>Deployment Details</h5>
+      </div>
+      <div class="content-card-body">
+        <form id="deployForm">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="pg-form-label">Company Name *</label>
+              <input name="company" class="pg-input" required placeholder="e.g., Amazon India">
+            </div>
+            <div class="col-md-6">
+              <label class="pg-form-label">Job Role *</label>
+              <select name="job_role" class="pg-input">
+                <option>Picker</option><option>Packer</option><option>Loader</option>
+                <option>Driver</option><option>Delivery Boy</option><option>Security Guard</option>
+                <option>Warehouse Worker</option><option>Helper</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="pg-form-label">Joining Date *</label>
+              <input type="date" name="joining_date" class="pg-input" required>
+            </div>
+            <div class="col-md-6">
+              <label class="pg-form-label">Shift *</label>
+              <select name="shift" class="pg-input">
+                <option>Day</option><option>Night</option><option>Rotational</option><option>Any</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="pg-form-label">Area / Location</label>
+              <input name="area" class="pg-input" placeholder="e.g., Chakan, Pune">
+            </div>
+            <div class="col-md-6">
+              <label class="pg-form-label">Assign Supervisor</label>
+              <select name="supervisor_id" id="supervisorSelect" class="pg-input">
+                <option value="">— Select Supervisor —</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="pg-alert pg-alert-info mt-4" style="font-size:13px;">
+            <i class="bi bi-info-circle-fill me-2"></i>
+            A unique Worker ID will be generated automatically. A confirmation email will be sent to the candidate upon deployment.
+          </div>
+
+          <button type="submit" class="btn-primary mt-3" style="width:100%;justify-content:center;padding:16px;">
+            <i class="bi bi-send"></i> Deploy & Generate Worker ID
+          </button>
+        </form>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const appId = {{ app_id }};
+
+async function loadData() {
+  const [appData, supervisors] = await Promise.all([
+    apiGet(`/api/v1/admin/applications/${appId}`),
+    apiGet('/api/v1/deployment/approved-supervisors'),
+  ]);
+
+  if (appData) {
+    const c = appData.candidate;
+    const j = appData.job;
+    document.getElementById('candidateSummary').innerHTML = `
+      <div class="content-card-body d-flex align-items-center gap-3">
+        <div class="candidate-avatar" style="width:64px;height:64px;font-size:2rem;">
+          ${c.profile_photo ? `<img src="/${c.profile_photo}" style="width:100%;height:100%;object-fit:cover;">` : '<i class="bi bi-person-fill"></i>'}
+        </div>
+        <div>
+          <h5 style="margin:0;">${c.full_name}</h5>
+          <p style="margin:0;font-size:13px;color:var(--ink-60);">${c.phone} · ${c.email}</p>
+          <div style="margin-top:6px;"><span class="badge-peach">${j.role}</span> <span style="font-size:13px;font-weight:600;margin-left:8px;">${j.title} @ ${j.company}</span></div>
+        </div>
+      </div>
+    `;
+    // Pre-fill job role
+    const roleSelect = document.querySelector('[name="job_role"]');
+    for (let opt of roleSelect.options) {
+      if (opt.value === j.role) { opt.selected = true; break; }
+    }
+    // Pre-fill company
+    document.querySelector('[name="company"]').value = j.company;
+  }
+
+  if (supervisors && supervisors.length) {
+    const sel = document.getElementById('supervisorSelect');
+    supervisors.forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s.id;
+      opt.textContent = `${s.name} (${s.area}, ${s.city})`;
+      sel.appendChild(opt);
+    });
+  }
+}
+
+document.getElementById('deployForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if (!confirm('Deploy this candidate as a Worker? This action upgrades their account and sends a confirmation email.')) return;
+  const fd = new FormData(e.target);
+  const res = await apiPost(`/api/v1/deployment/deploy/${appId}`, fd);
+  if (res) {
+    alert(`✅ Deployed successfully!\nWorker ID: ${res.worker_id}\nConfirmation email sent.`);
+    window.location.href = '/dashboard/admin/workers';
+  }
+});
+
+loadData();
+</script>
+{% endblock %}

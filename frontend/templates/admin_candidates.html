@@ -1,0 +1,81 @@
+{% extends "dashboard_base.html" %}
+{% block title %}Candidates – Admin{% endblock %}
+
+{% block sidebar %}
+  <div class="sidebar-label">Main</div>
+  <a href="/dashboard/admin" class="sidebar-link"><i class="bi bi-speedometer2"></i> Overview</a>
+  <a href="/dashboard/admin/analytics" class="sidebar-link"><i class="bi bi-bar-chart-fill"></i> Analytics</a>
+  <div class="sidebar-label">Recruitment</div>
+  <a href="/dashboard/admin/jobs" class="sidebar-link"><i class="bi bi-briefcase"></i> Jobs & Applications</a>
+  <a href="/dashboard/admin/candidates" class="sidebar-link active"><i class="bi bi-people"></i> Candidates</a>
+  <a href="/dashboard/admin/workers" class="sidebar-link"><i class="bi bi-person-badge"></i> Workers</a>
+  <div class="sidebar-label">Management</div>
+  <a href="/dashboard/admin/supervisors" class="sidebar-link"><i class="bi bi-person-gear"></i> Supervisors</a>
+{% endblock %}
+
+{% block content %}
+<div class="dash-header">
+  <h1 class="dash-title">Candidates</h1>
+  <input class="pg-input" id="searchInput" placeholder="Search by name, phone..." style="max-width:280px;padding:10px 16px;font-size:14px;" oninput="filterCandidates()">
+</div>
+
+<div class="row g-3" id="candidatesGrid">
+  <div class="col-12 text-center py-5" style="color:var(--ink-60);">Loading...</div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let allCandidates = [];
+
+async function loadCandidates() {
+  const data = await apiGet('/api/v1/admin/candidates');
+  if (!data) return;
+  allCandidates = data;
+  renderCandidates(data);
+}
+
+function renderCandidates(candidates) {
+  const grid = document.getElementById('candidatesGrid');
+  if (!candidates.length) { grid.innerHTML = '<div class="col-12 text-center py-5" style="color:var(--ink-60);">No candidates found.</div>'; return; }
+
+  grid.innerHTML = candidates.map(c => `
+    <div class="col-lg-3 col-md-4 col-sm-6">
+      <div class="candidate-card" style="flex-direction:column;align-items:flex-start;gap:1rem;">
+        <div style="display:flex;align-items:center;gap:1rem;">
+          <div class="candidate-avatar" style="width:56px;height:56px;border-radius:12px;">
+            ${c.profile_photo ? `<img src="/${c.profile_photo}" style="width:100%;height:100%;object-fit:cover;">` : '<i class="bi bi-person-fill"></i>'}
+          </div>
+          <div>
+            <h5 style="margin:0;font-size:0.95rem;">${c.full_name}</h5>
+            <p style="margin:0;font-size:12px;color:var(--ink-60);">${c.phone}</p>
+          </div>
+        </div>
+        <div style="width:100%;font-size:12px;color:var(--ink-60);">
+          <i class="bi bi-geo-alt me-1"></i>${c.city || '—'} &nbsp;·&nbsp;
+          <i class="bi bi-mortarboard me-1"></i>${c.qualification || '—'}
+        </div>
+        ${c.latest_application ? `
+        <div style="width:100%;padding-top:0.75rem;border-top:1px solid var(--ink-05);">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-60);margin-bottom:4px;">Latest Application</div>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <span style="font-size:13px;font-weight:600;">${c.latest_application.job}</span>
+            <span class="status-pill status-${c.latest_application.status.toLowerCase()}">${c.latest_application.status}</span>
+          </div>
+          <a href="/dashboard/admin/application/${c.latest_application.id}" style="font-size:12px;color:var(--coral);font-weight:600;margin-top:4px;display:inline-block;">View Application →</a>
+        </div>` : '<p style="font-size:12px;color:var(--ink-60);margin:0;width:100%;padding-top:0.75rem;border-top:1px solid var(--ink-05);">No applications yet.</p>'}
+      </div>
+    </div>
+  `).join('');
+}
+
+function filterCandidates() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  renderCandidates(allCandidates.filter(c =>
+    c.full_name.toLowerCase().includes(q) || c.phone.includes(q) || (c.city || '').toLowerCase().includes(q)
+  ));
+}
+
+loadCandidates();
+</script>
+{% endblock %}

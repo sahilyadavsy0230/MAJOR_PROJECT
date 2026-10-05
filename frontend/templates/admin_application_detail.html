@@ -1,0 +1,479 @@
+{% extends "dashboard_base.html" %}
+{% block title %}Application Detail – Prashant Group{% endblock %}
+
+{% block sidebar %}
+  <div class="sidebar-label">Main</div>
+  <a href="/dashboard/admin" class="sidebar-link"><i class="bi bi-speedometer2"></i> Overview</a>
+  <a href="/dashboard/admin/analytics" class="sidebar-link"><i class="bi bi-bar-chart-fill"></i> Analytics</a>
+  <div class="sidebar-label">Recruitment</div>
+  <a href="/dashboard/admin/jobs" class="sidebar-link"><i class="bi bi-briefcase"></i> Jobs & Applications</a>
+  <a href="/dashboard/admin/candidates" class="sidebar-link active"><i class="bi bi-people"></i> Candidates</a>
+  <a href="/dashboard/admin/workers" class="sidebar-link"><i class="bi bi-person-badge"></i> Workers</a>
+  <div class="sidebar-label">Management</div>
+  <a href="/dashboard/admin/supervisors" class="sidebar-link"><i class="bi bi-person-gear"></i> Supervisors</a>
+{% endblock %}
+
+{% block content %}
+<div class="dash-header">
+  <div>
+    <a href="javascript:history.back()" style="font-size:13px;color:var(--ink-60);font-weight:600;"><i class="bi bi-arrow-left"></i> Back</a>
+    <h1 class="dash-title mt-1">Application Dossier</h1>
+  </div>
+  <div id="statusBadge"></div>
+</div>
+
+<div class="row g-4">
+  <!-- Left: Candidate Info -->
+  <div class="col-lg-4">
+    <div class="content-card mb-4">
+      <div class="content-card-body text-center">
+        <div id="candidatePhoto" class="candidate-avatar mx-auto mb-3" style="width:100px;height:100px;border-radius:var(--radius-md);font-size:3rem;">
+          <i class="bi bi-person-fill"></i>
+        </div>
+        <h4 id="candName" style="margin:0 0 4px;font-family:var(--font-serif);font-size:1.6rem;">Loading...</h4>
+        <p id="candEmail" style="margin:0;color:var(--ink-60);font-size:13px;"></p>
+        <p id="candPhone" style="margin:2px 0 0;color:var(--coral);font-weight:700;font-size:14px;"></p>
+      </div>
+      <div style="border-top:1px solid var(--ink-05);padding:1.25rem 1.75rem;font-size:13px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+          <div><span style="color:var(--ink-60);display:block;font-size:11px;font-weight:700;text-transform:uppercase;">DOB</span><span id="candDob">—</span></div>
+          <div><span style="color:var(--ink-60);display:block;font-size:11px;font-weight:700;text-transform:uppercase;">Age / Gender</span><span id="candAge">—</span> / <span id="candGender">—</span></div>
+          <div><span style="color:var(--ink-60);display:block;font-size:11px;font-weight:700;text-transform:uppercase;">City</span><span id="candCity">—</span></div>
+          <div><span style="color:var(--ink-60);display:block;font-size:11px;font-weight:700;text-transform:uppercase;">State / PIN</span><span id="candState">—</span> <span id="candPin"></span></div>
+          <div style="grid-column:span 2;"><span style="color:var(--ink-60);display:block;font-size:11px;font-weight:700;text-transform:uppercase;">Address</span><span id="candAddr">—</span></div>
+        </div>
+      </div>
+      <div style="border-top:1px solid var(--ink-05);padding:1.25rem 1.75rem;font-size:13px;background:var(--off-white);">
+        <div style="font-weight:700;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-60);margin-bottom:8px;">Education & Preferences</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+          <div><span style="color:var(--ink-60);display:block;font-size:11px;font-weight:700;text-transform:uppercase;">Qualification</span><strong id="candQual">—</strong></div>
+          <div><span style="color:var(--ink-60);display:block;font-size:11px;font-weight:700;text-transform:uppercase;">Experience</span><strong id="candExp">—</strong></div>
+          <div><span style="color:var(--ink-60);display:block;font-size:11px;font-weight:700;text-transform:uppercase;">Preferred Role</span><strong id="candPJob">—</strong></div>
+          <div><span style="color:var(--ink-60);display:block;font-size:11px;font-weight:700;text-transform:uppercase;">Exp. Salary</span><strong id="candSal">—</strong></div>
+          <div><span style="color:var(--ink-60);display:block;font-size:11px;font-weight:700;text-transform:uppercase;">Shift</span><strong id="candShift">—</strong></div>
+          <div><span style="color:var(--ink-60);display:block;font-size:11px;font-weight:700;text-transform:uppercase;">Source</span><strong id="candSource">—</strong></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right: Job, Documents, Interview, Actions -->
+  <div class="col-lg-8">
+
+    <!-- Applied Job Card -->
+    <div class="content-card mb-4">
+      <div class="content-card-header"><h5 style="margin:0;font-family:var(--font-serif);">Applied Job</h5></div>
+      <div class="content-card-body">
+        <div id="jobInfo"></div>
+      </div>
+    </div>
+
+    <!-- Documents -->
+    <div class="content-card mb-4">
+      <div class="content-card-header">
+        <div>
+          <h5 style="margin:0;font-family:var(--font-serif);"><i class="bi bi-folder2-open text-coral me-2"></i> Candidate Uploaded Documents</h5>
+          <p style="margin:4px 0 0;font-size:12px;color:var(--ink-60);">KYC & Educational records uploaded by candidate during registration.</p>
+        </div>
+      </div>
+      <div class="content-card-body">
+        <div id="documentsList"><p style="color:var(--ink-60);font-size:14px;">No documents uploaded yet.</p></div>
+      </div>
+    </div>
+
+    <!-- Interview Info (if scheduled) -->
+    <div class="content-card mb-4 d-none" id="interviewCard">
+      <div class="content-card-header d-flex justify-content-between align-items-center">
+        <div>
+          <h5 style="margin:0;font-family:var(--font-serif);"><i class="bi bi-calendar-event text-coral me-2"></i> Scheduled Interview</h5>
+          <p style="margin:3px 0 0;font-size:12px;color:var(--ink-60);">Interview call letter generated &amp; emailed to candidate.</p>
+        </div>
+        <button id="interviewPdfBtn" onclick="downloadCallLetter()" class="btn-secondary" style="padding:7px 16px;font-size:12px;">
+          <i class="bi bi-file-earmark-pdf-fill text-coral"></i> Download Call Letter (PDF)
+        </button>
+      </div>
+      <div class="content-card-body" id="interviewInfo"></div>
+
+      <!-- POST-INTERVIEW RESULT PANEL — visible only when status is INTERVIEW -->
+      <div id="postInterviewResultPanel" class="d-none" style="border-top:2px dashed var(--coral);padding:1.25rem 1.75rem;background:linear-gradient(135deg,rgba(239,70,35,0.03),rgba(22,163,74,0.03));">
+        <div style="font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-60);margin-bottom:12px;">
+          <i class="bi bi-clipboard2-check me-1 text-coral"></i> Record Interview Result
+        </div>
+        <div class="d-flex gap-3 flex-wrap">
+          <button onclick="selectAfterInterview()" class="btn-primary" style="flex:1;min-width:200px;justify-content:center;padding:14px;background:#16A34A;box-shadow:0 4px 16px rgba(22,163,74,0.25);">
+            <i class="bi bi-check-circle-fill me-2"></i> Candidate SELECTED (Interview Passed)
+          </button>
+          <button onclick="openRejectModal()" class="btn-primary" style="flex:1;min-width:200px;justify-content:center;padding:14px;background:#DC2626;box-shadow:0 4px 16px rgba(220,38,38,0.25);">
+            <i class="bi bi-x-circle-fill me-2"></i> Candidate REJECTED (Interview Failed)
+          </button>
+          <button onclick="document.getElementById('interviewModal').style.display='flex'" class="btn-secondary" style="padding:14px 20px;font-size:13px;">
+            <i class="bi bi-calendar-check me-1"></i> Reschedule
+          </button>
+        </div>
+        <p style="margin:12px 0 0;font-size:12px;color:var(--ink-60);">
+          <i class="bi bi-info-circle me-1"></i> Selecting the candidate will enable the "Deploy &amp; Issue Offer Letter" action. Rejecting sends a formal rejection email.
+        </p>
+      </div>
+    </div>
+
+    <!-- Actions Panel -->
+    <div class="content-card">
+      <div class="content-card-header"><h5 style="margin:0;font-family:var(--font-serif);">Workflow Actions</h5></div>
+      <div class="content-card-body">
+        <div id="actionsPanel" style="display:flex;flex-direction:column;gap:1rem;"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Upload Doc Modal -->
+<div id="uploadDocModal" style="display:none;position:fixed;inset:0;background:rgba(45,59,66,0.6);backdrop-filter:blur(4px);z-index:9999;align-items:center;justify-content:center;padding:1rem;">
+  <div style="background:#fff;border-radius:var(--radius-lg);padding:2.5rem;max-width:480px;width:100%;">
+    <div style="display:flex;justify-content:space-between;margin-bottom:1.5rem;">
+      <h4 style="margin:0;font-family:var(--font-serif);">Upload Document</h4>
+      <button onclick="document.getElementById('uploadDocModal').style.display='none'" style="background:none;border:none;font-size:1.5rem;cursor:pointer;">&times;</button>
+    </div>
+    <form id="uploadDocForm">
+      <div class="mb-3">
+        <label class="pg-form-label">Document Type *</label>
+        <select name="document_type" class="pg-input" required>
+          <option>10th Marksheet</option><option>12th Marksheet</option>
+          <option>ITI Certificate</option><option>Diploma Certificate</option>
+          <option>Graduation Certificate</option><option>Aadhaar Card</option>
+          <option>PAN Card</option><option>Other</option>
+        </select>
+      </div>
+      <div class="mb-4">
+        <label class="pg-form-label">File (PDF / Image) *</label>
+        <input type="file" name="file" class="pg-input" accept=".pdf,.jpg,.jpeg,.png,.webp" required>
+      </div>
+      <button type="submit" class="btn-primary w-100" style="width:100%;justify-content:center;">Upload & Attach</button>
+    </form>
+  </div>
+</div>
+
+<!-- Schedule Interview Modal -->
+<div id="interviewModal" style="display:none;position:fixed;inset:0;background:rgba(45,59,66,0.6);backdrop-filter:blur(4px);z-index:9999;align-items:center;justify-content:center;padding:1rem;">
+  <div style="background:#fff;border-radius:var(--radius-lg);padding:2.5rem;max-width:520px;width:100%;">
+    <div style="display:flex;justify-content:space-between;margin-bottom:1.5rem;">
+      <div>
+        <h4 style="margin:0;font-family:var(--font-serif);font-size:1.8rem;">Schedule Interview</h4>
+        <p style="margin:0;color:var(--ink-60);font-size:13px;">Generates formal PDF Call Letter and dispatches via SMTP.</p>
+      </div>
+      <button onclick="document.getElementById('interviewModal').style.display='none'" style="background:none;border:none;font-size:1.5rem;cursor:pointer;">&times;</button>
+    </div>
+    <form id="interviewForm">
+      <div class="row g-3">
+        <div class="col-12">
+          <label class="pg-form-label">HR Executive Name *</label>
+          <input name="hr_name" class="pg-input" placeholder="e.g. Rahul Patil / HR Desk" required>
+        </div>
+        <div class="col-12">
+          <label class="pg-form-label">Client Company *</label>
+          <input name="client_name" id="interviewClientInput" class="pg-input" required>
+        </div>
+        <div class="col-6">
+          <label class="pg-form-label">Interview Date *</label>
+          <input type="date" name="interview_date" id="interviewDateInput" class="pg-input" required>
+        </div>
+        <div class="col-6">
+          <label class="pg-form-label">Interview Time *</label>
+          <input type="time" name="interview_time" id="interviewTimeInput" class="pg-input" value="10:30" required>
+        </div>
+        <div class="col-12">
+          <label class="pg-form-label">Venue / Address</label>
+          <input name="venue" class="pg-input" placeholder="e.g. Prashant Group Regional Office / Client Factory Gate 2">
+        </div>
+      </div>
+      <div class="pg-alert pg-alert-info mt-3" style="font-size:12px;">
+        <i class="bi bi-envelope-paper-fill me-1"></i> A formal A4 Interview Call Letter on company letterhead will be generated and emailed to the candidate.
+      </div>
+      <button type="submit" id="interviewSubmitBtn" class="btn-primary mt-3 w-100" style="width:100%;justify-content:center;">
+        <i class="bi bi-calendar-check-fill"></i> Schedule & Dispatch PDF Call Letter
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- Rejection Reason Modal -->
+<div id="rejectModal" style="display:none;position:fixed;inset:0;background:rgba(45,59,66,0.6);backdrop-filter:blur(4px);z-index:9999;align-items:center;justify-content:center;padding:1rem;">
+  <div style="background:#fff;border-radius:var(--radius-lg);padding:2.5rem;max-width:480px;width:100%;">
+    <div style="display:flex;justify-content:space-between;margin-bottom:1.5rem;">
+      <div>
+        <h4 style="margin:0;font-family:var(--font-serif);font-size:1.6rem;color:#dc2626;">Reject Application</h4>
+        <p style="margin:4px 0 0;color:var(--ink-60);font-size:13px;">A formal rejection email will be sent to the candidate.</p>
+      </div>
+      <button onclick="document.getElementById('rejectModal').style.display='none'" style="background:none;border:none;font-size:1.5rem;cursor:pointer;">&times;</button>
+    </div>
+    <div class="mb-3">
+      <label class="pg-form-label">Rejection Reason *</label>
+      <textarea id="rejectReasonInput" class="pg-input" rows="4" placeholder="e.g. Candidate did not meet the physical fitness requirements for this role. Please apply for other suitable openings."></textarea>
+    </div>
+    <div class="pg-alert pg-alert-info" style="font-size:12px;">
+      <i class="bi bi-envelope-fill me-1"></i> This reason will be included in the rejection email sent to the candidate.
+    </div>
+    <div class="d-flex gap-2 mt-3">
+      <button onclick="document.getElementById('rejectModal').style.display='none'" class="btn-secondary" style="flex:1;justify-content:center;">Cancel</button>
+      <button id="rejectSubmitBtn" onclick="submitRejection()" class="btn-primary" style="flex:1;justify-content:center;background:#dc2626;box-shadow:none;"><i class="bi bi-x-circle"></i> Send Rejection</button>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const appId = {{ app_id }};
+let appData = null;
+
+async function loadApplication() {
+  const data = await apiGet(`/api/v1/admin/applications/${appId}`);
+  if (!data) return;
+  appData = data;
+
+  const c = data.candidate;
+  const app = data.application;
+  const job = data.job;
+
+  // Status badge
+  document.getElementById('statusBadge').innerHTML = `<span class="status-pill status-${app.status.toLowerCase()}">${app.status}</span>`;
+
+  // Profile photo
+  if (c.profile_photo) {
+    document.getElementById('candidatePhoto').innerHTML = `<img src="/${c.profile_photo}" style="width:100%;height:100%;object-fit:cover;">`;
+  }
+
+  document.getElementById('candName').textContent    = c.full_name;
+  document.getElementById('candEmail').textContent   = c.email;
+  document.getElementById('candPhone').textContent   = c.phone;
+  document.getElementById('candDob').textContent     = c.dob || '—';
+  document.getElementById('candAge').textContent     = c.age || '—';
+  document.getElementById('candGender').textContent  = c.gender || '—';
+  document.getElementById('candCity').textContent    = c.city || '—';
+  document.getElementById('candState').textContent   = c.state || '—';
+  document.getElementById('candPin').textContent     = c.pin_code || '—';
+  document.getElementById('candAddr').textContent    = c.current_address || '—';
+  document.getElementById('candQual').textContent    = c.qualification || '—';
+  document.getElementById('candExp').textContent     = c.experience || '—';
+  document.getElementById('candPJob').textContent    = c.preferred_job || '—';
+  document.getElementById('candSal').textContent     = c.expected_salary || '—';
+  document.getElementById('candShift').textContent   = c.preferred_shift || '—';
+  document.getElementById('candSource').textContent  = c.source || '—';
+
+  // Default client in interview modal
+  document.getElementById('interviewClientInput').value = job.company;
+
+  // Set default interview date to tomorrow
+  const tmr = new Date();
+  tmr.setDate(tmr.getDate() + 1);
+  document.getElementById('interviewDateInput').value = tmr.toISOString().split('T')[0];
+
+  // Job info
+  document.getElementById('jobInfo').innerHTML = `
+    <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+      <span class="badge-peach">${job.role}</span>
+      <strong>${job.title}</strong>
+      <span style="color:var(--ink-60);font-size:14px;">@ ${job.company}</span>
+    </div>
+    <p style="margin:0.5rem 0 0;font-size:13px;color:var(--ink-60);">Applied: ${app.applied_date ? app.applied_date.split('T')[0] : '—'}</p>
+  `;
+
+  // Documents
+  renderDocuments(data.documents);
+
+  // Interview
+  if (data.interview) {
+    document.getElementById('interviewCard').classList.remove('d-none');
+    const iv = data.interview;
+    document.getElementById('interviewPdfBtn').href = `/api/v1/admin/applications/${appId}/interview-letter/pdf`;
+    document.getElementById('interviewInfo').innerHTML = `
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem;font-size:14px;">
+        <div><div style="color:var(--ink-60);font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:4px;">HR Name</div><strong>${iv.hr_name}</strong></div>
+        <div><div style="color:var(--ink-60);font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:4px;">Client</div><strong>${iv.client_name}</strong></div>
+        <div><div style="color:var(--ink-60);font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:4px;">Date</div><strong>${iv.interview_date}</strong></div>
+        <div><div style="color:var(--ink-60);font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:4px;">Time</div><strong>${iv.interview_time}</strong></div>
+      </div>
+      <div class="mt-3 d-flex align-items-center gap-2">
+        <span class="status-pill status-${iv.status.toLowerCase()}">${iv.status}</span>
+      </div>
+    `;
+
+    // Show result action buttons if currently in INTERVIEW status
+    const resultPanel = document.getElementById('postInterviewResultPanel');
+    if (resultPanel) {
+      if (app.status === 'INTERVIEW') {
+        resultPanel.classList.remove('d-none');
+      } else {
+        resultPanel.classList.add('d-none');
+      }
+    }
+  } else {
+    document.getElementById('interviewCard').classList.add('d-none');
+  }
+
+  // Actions
+  renderActions(app.status);
+}
+
+function renderDocuments(docs) {
+  const el = document.getElementById('documentsList');
+  if (!docs || !docs.length) { 
+    el.innerHTML = '<p style="color:var(--ink-60);font-size:14px;">No documents uploaded yet.</p>'; 
+    return; 
+  }
+  el.innerHTML = docs.map(d => `
+    <div class="doc-row" style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border:1px solid var(--ink-05);border-radius:var(--radius-sm);margin-bottom:8px;background:var(--ink-02);">
+      <div class="doc-info" style="display:flex;align-items:center;gap:12px;">
+        <div class="doc-icon" style="font-size:1.5rem;color:var(--coral);"><i class="bi bi-file-earmark-text"></i></div>
+        <div>
+          <div style="font-weight:700;font-size:14px;color:var(--ink);">${d.type}</div>
+          <div style="font-size:12px;color:var(--ink-60);">${d.uploaded_at ? 'Uploaded: ' + d.uploaded_at.split('T')[0] : 'KYC / Profile Document'}</div>
+        </div>
+      </div>
+      <div class="doc-actions">
+        <button onclick="viewCandidateDoc(${d.id})" class="btn-secondary" style="padding:6px 14px;font-size:12px;display:inline-flex;align-items:center;gap:6px;">
+          <i class="bi bi-eye-fill text-coral"></i> View Document
+        </button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function viewCandidateDoc(docId) {
+  const token = localStorage.getItem('token');
+  window.open(`/api/v1/documents/view/${docId}?token=${token || ''}`, '_blank');
+}
+
+function renderActions(status) {
+  const panel = document.getElementById('actionsPanel');
+  const actions = [];
+
+  if (status === 'APPLIED') {
+    actions.push(`<button onclick="document.getElementById('interviewModal').style.display='flex'" class="btn-primary"><i class="bi bi-calendar-plus"></i> Schedule Interview</button>`);
+    actions.push(`<button onclick="updateStatus('SHORTLISTED')", class="btn-secondary"><i class="bi bi-bookmark-check"></i> Shortlist Candidate</button>`);
+    actions.push(`<button onclick="openRejectModal()" class="btn-secondary" style="color:#dc2626;border-color:#dc2626;"><i class="bi bi-x-circle"></i> Reject Application</button>`);
+  }
+  if (status === 'SHORTLISTED') {
+    actions.push(`<button onclick="document.getElementById('interviewModal').style.display='flex'" class="btn-primary"><i class="bi bi-calendar-plus"></i> Schedule Interview</button>`);
+    actions.push(`<button onclick="updateStatus('SELECTED')" class="btn-primary" style="background:#16a34a;box-shadow:none;"><i class="bi bi-check-circle"></i> Direct Select Candidate</button>`);
+    actions.push(`<button onclick="openRejectModal()" class="btn-secondary" style="color:#dc2626;border-color:#dc2626;"><i class="bi bi-x-circle"></i> Reject</button>`);
+  }
+  if (status === 'INTERVIEW') {
+    actions.push(`<button onclick="updateStatus('SELECTED')" class="btn-primary" style="background:#16a34a;box-shadow:none;"><i class="bi bi-check-circle"></i> Select Candidate (Passed Interview)</button>`);
+    actions.push(`<button onclick="document.getElementById('interviewModal').style.display='flex'" class="btn-secondary"><i class="bi bi-calendar-check"></i> Reschedule Interview</button>`);
+    actions.push(`<button onclick="openRejectModal()" class="btn-secondary" style="color:#dc2626;border-color:#dc2626;"><i class="bi bi-x-circle"></i> Reject after Interview</button>`);
+  }
+  if (status === 'SELECTED') {
+    actions.push(`<button onclick="window.location='/dashboard/admin/deploy/${appId}'" class="btn-primary"><i class="bi bi-send-fill"></i> Deploy Candidate & Issue Offer Letter</button>`);
+    actions.push(`<button onclick="downloadPdf('/api/v1/deployment/applications/${appId}/offer-letter/pdf','Offer_Letter_App_${appId}.pdf')" class="btn-secondary"><i class="bi bi-file-earmark-pdf-fill text-coral"></i> Download Offer Letter (PDF)</button>`);
+  }
+  if (status === 'REJECTED') {
+    actions.push(`<div class="pg-alert pg-alert-error"><i class="bi bi-x-circle-fill me-2"></i> This application was rejected. A rejection email was dispatched to the candidate.</div>`);
+    actions.push(`<button onclick="updateStatus('APPLIED')" class="btn-secondary"><i class="bi bi-arrow-counterclockwise"></i> Re-open Application</button>`);
+  }
+
+  panel.innerHTML = actions.length ? actions.join('') : '<p style="color:var(--ink-60);font-size:14px;">No actions available.</p>';
+}
+
+// ── PDF download with auth token (fixes "Not authenticated" error) ─────────
+async function downloadPdf(url, filename) {
+  const token = localStorage.getItem('token');
+  if (!token) { alert('Please log in again.'); return; }
+  try {
+    const btn = event.target;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Generating PDF...';
+    const res = await fetch(url, { headers: { 'Authorization': 'Bearer ' + token } });
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-file-earmark-pdf-fill text-coral"></i> Download Offer Letter (PDF)';
+    if (!res.ok) { alert('Error generating PDF: ' + res.status); return; }
+    const blob = await res.blob();
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(link.href);
+  } catch(e) { alert('Download failed: ' + e.message); }
+}
+
+// ── Call letter download (interview) ────────────────────────────────────────
+async function downloadCallLetter() {
+  await downloadPdf(
+    `/api/v1/admin/applications/${appId}/interview-letter/pdf`,
+    `Interview_Call_Letter_App_${appId}.pdf`
+  );
+}
+
+// ── Rejection with reason ────────────────────────────────────────────────────
+function openRejectModal() {
+  document.getElementById('rejectModal').style.display = 'flex';
+}
+
+async function submitRejection() {
+  const reason = document.getElementById('rejectReasonInput').value.trim();
+  if (!reason) { alert('Please enter a rejection reason before sending.'); return; }
+  const btn = document.getElementById('rejectSubmitBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Sending...';
+  const fd = new FormData();
+  fd.append('new_status', 'REJECTED');
+  fd.append('rejection_reason', reason);
+  const res = await apiPatch(`/api/v1/admin/applications/${appId}/status`, fd);
+  btn.disabled = false;
+  btn.innerHTML = '<i class="bi bi-x-circle"></i> Send Rejection';
+  if (res) {
+    document.getElementById('rejectModal').style.display = 'none';
+    alert('✅ Application rejected and formal rejection email dispatched to candidate.');
+    loadApplication();
+  }
+}
+
+async function selectAfterInterview() {
+  if (!confirm('Mark candidate as SELECTED (Passed Interview)? This will allow deploying them as a worker.')) return;
+  await updateStatus('SELECTED');
+}
+
+async function updateStatus(newStatus) {
+  if (!confirm(`Update status to ${newStatus}?`)) return;
+  const fd = new FormData();
+  fd.append('new_status', newStatus);
+  const res = await apiPatch(`/api/v1/admin/applications/${appId}/status`, fd);
+  if (res) loadApplication();
+}
+
+async function verifyDoc(docId, action) {
+  const fd = new FormData();
+  fd.append('action', action);
+  const res = await apiPatch(`/api/v1/admin/documents/${docId}/verify`, fd);
+  if (res) loadApplication();
+}
+
+document.getElementById('uploadDocForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const res = await apiPost(`/api/v1/documents/applications/${appId}/upload`, fd);
+  if (res) { document.getElementById('uploadDocModal').style.display = 'none'; loadApplication(); }
+});
+
+document.getElementById('interviewForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById('interviewSubmitBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Generating Letter & Sending Email...';
+
+  const fd = new FormData(e.target);
+  const res = await apiPost(`/api/v1/admin/applications/${appId}/interview`, fd);
+  btn.disabled = false;
+  btn.innerHTML = '<i class="bi bi-calendar-check-fill"></i> Schedule & Dispatch PDF Call Letter';
+
+  if (res) {
+    document.getElementById('interviewModal').style.display = 'none';
+    alert('✅ ' + (res.message || 'Interview scheduled! Email dispatched.'));
+    loadApplication();
+  }
+});
+
+loadApplication();
+</script>
+{% endblock %}

@@ -1,0 +1,629 @@
+{% extends "dashboard_base.html" %}
+{% block title %}Supervisor Dashboard – Prashant Group{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* Mandatory GPS Blocking Overlay */
+  #gpsLockOverlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.88);
+    backdrop-filter: blur(8px);
+    z-index: 99999;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+  }
+  .gps-lock-card {
+    background: #fff;
+    border-radius: var(--radius-lg);
+    padding: 2.5rem;
+    max-width: 500px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+    animation: scaleIn 0.3s ease;
+  }
+  @keyframes scaleIn {
+    from { transform: scale(0.92); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+  .pulse-ring {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: rgba(239, 70, 35, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1.5rem;
+    color: var(--coral);
+    font-size: 2rem;
+    animation: pulseGps 1.8s infinite;
+  }
+  @keyframes pulseGps {
+    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 70, 35, 0.5); }
+    70% { transform: scale(1.05); box-shadow: 0 0 0 14px rgba(239, 70, 35, 0); }
+    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 70, 35, 0); }
+  }
+</style>
+{% endblock %}
+
+{% block sidebar %}
+  <div class="sidebar-label">Supervisor Portal</div>
+  <a href="#attendanceSection" onclick="switchTab('attendance')" id="tabNavAttendance" class="sidebar-link active"><i class="bi bi-calendar-check-fill"></i> Daily Attendance</a>
+  <a href="#workforceSection" onclick="switchTab('workforce')" id="tabNavWorkforce" class="sidebar-link"><i class="bi bi-people-fill"></i> My Workforce</a>
+  <div class="sidebar-label">Account</div>
+  <a href="/login" onclick="logout()" class="sidebar-link" style="color:var(--coral);"><i class="bi bi-box-arrow-right"></i> Sign Out</a>
+{% endblock %}
+
+{% block content %}
+<!-- ── FULLSCREEN MANDATORY GPS LOCK OVERLAY ──────────────────────────────── -->
+<div id="gpsLockOverlay">
+  <div class="gps-lock-card">
+    <div class="pulse-ring">
+      <i class="bi bi-geo-alt-fill"></i>
+    </div>
+    <h3 style="margin: 0 0 8px; font-family: var(--font-serif); font-size: 1.75rem; color: var(--ink);">
+      GPS Location Required
+    </h3>
+    <p style="color: var(--ink-60); font-size: 14px; margin-bottom: 1.5rem; line-height: 1.5;">
+      Device GPS is strictly mandatory for Prashant Group field supervisors. You must allow location access to access the dashboard and mark workforce attendance at your assigned industrial site.
+    </p>
+
+    <div id="gpsLockMessage" class="pg-alert pg-alert-error mb-3" style="font-size: 12px; text-align: left;">
+      <i class="bi bi-exclamation-triangle-fill me-1"></i> Location permission is currently blocked or turned off.
+    </div>
+
+    <div class="d-flex flex-column gap-2">
+      <button onclick="requestGPS(true)" id="btnRetryGPS" class="btn-primary" style="justify-content: center; padding: 12px; width: 100%;">
+        <i class="bi bi-arrow-repeat me-1"></i> Enable / Retry GPS Location
+      </button>
+      <button onclick="logout()" class="btn-secondary" style="justify-content: center; padding: 10px; width: 100%; border-color: #DC2626; color: #DC2626;">
+        <i class="bi bi-box-arrow-right me-1"></i> Sign Out
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Supervisor Header Banner -->
+<div style="background: linear-gradient(135deg, #2D3B42 0%, #1a2327 100%); border-radius: var(--radius-lg); padding: 2rem 2.5rem; margin-bottom: 2rem; color: #fff; border: 1px solid rgba(255,255,255,0.05); position: relative; overflow: hidden;">
+  <div style="position: absolute; right: -20px; bottom: -20px; font-size: 10rem; color: rgba(255,255,255,0.03); pointer-events: none;">
+    <i class="bi bi-person-gear"></i>
+  </div>
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+    <div>
+      <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--coral); margin-bottom: 6px;">
+        <i class="bi bi-shield-lock-fill me-1"></i> Authorized Supervisor Portal
+      </div>
+      <h2 id="supName" style="margin: 0 0 6px; font-family: var(--font-serif); font-size: clamp(1.8rem, 3vw, 2.4rem); color: #fff;">
+        Loading Supervisor...
+      </h2>
+      <p id="supMeta" style="margin: 0; font-size: 14px; color: rgba(255,255,255,0.75); display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+        <span><i class="bi bi-building text-coral me-1"></i> Client Company: <strong id="supAssignedCompany" style="color:#fff;">—</strong></span>
+        <span><i class="bi bi-geo-alt-fill text-coral me-1"></i> Assigned Site: <strong id="supAssignedLocation" style="color:#fff;">—</strong></span>
+        <span><i class="bi bi-telephone text-coral me-1"></i> <span id="supPhone">—</span></span>
+      </p>
+    </div>
+    <div class="d-flex flex-column align-items-end gap-2">
+      <div id="gpsStatusPill" style="font-size:12px;background:rgba(239,70,35,0.15);color:var(--coral);border:1px solid rgba(239,70,35,0.3);padding:6px 14px;border-radius:20px;display:flex;align-items:center;gap:6px;">
+        <i class="bi bi-geo-alt-fill"></i> <span id="gpsStatusText">Detecting GPS...</span>
+      </div>
+      <div class="d-flex gap-2">
+        <button onclick="requestGPS(true)" class="btn-secondary" style="background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2); color: #fff; font-size: 12px; padding: 6px 12px;">
+          <i class="bi bi-geo me-1"></i> Recalibrate GPS
+        </button>
+        <button onclick="loadAttendance()" class="btn-secondary" style="background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2); color: #fff; font-size: 12px; padding: 6px 12px;">
+          <i class="bi bi-arrow-clockwise me-1"></i> Refresh
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- KPI Stats Grid -->
+<div class="row g-3 mb-4">
+  <div class="col-md-3 col-6">
+    <div class="stat-card">
+      <div class="stat-icon" style="background: var(--ink-05); color: var(--ink);"><i class="bi bi-people-fill"></i></div>
+      <div class="stat-val" id="statTotal">0</div>
+      <div class="stat-lbl">Assigned Workers</div>
+    </div>
+  </div>
+  <div class="col-md-3 col-6">
+    <div class="stat-card">
+      <div class="stat-icon" style="background: #EBF8F2; color: #16A34A;"><i class="bi bi-check-circle-fill"></i></div>
+      <div class="stat-val" id="statPresent" style="color: #16A34A;">0</div>
+      <div class="stat-lbl">Present Today</div>
+    </div>
+  </div>
+  <div class="col-md-3 col-6">
+    <div class="stat-card">
+      <div class="stat-icon" style="background: #FDF1EE; color: #DC2626;"><i class="bi bi-x-circle-fill"></i></div>
+      <div class="stat-val" id="statAbsent" style="color: #DC2626;">0</div>
+      <div class="stat-lbl">Absent / Leave</div>
+    </div>
+  </div>
+  <div class="col-md-3 col-6">
+    <div class="stat-card">
+      <div class="stat-icon" style="background: #FEF3C7; color: #D97706;"><i class="bi bi-clock-history"></i></div>
+      <div class="stat-val" id="statPending" style="color: #D97706;">0</div>
+      <div class="stat-lbl">Pending Attendance</div>
+    </div>
+  </div>
+</div>
+
+<!-- TAB 1: DAILY ATTENDANCE SHEET -->
+<div id="sectionAttendance">
+  <div class="content-card mb-4">
+    <div class="content-card-header d-flex justify-content-between align-items-center flex-wrap gap-3" style="padding: 1.25rem 1.75rem;">
+      <div class="d-flex align-items-center gap-3 flex-wrap">
+        <h5 style="margin: 0; font-family: var(--font-serif); font-size: 1.35rem;">
+          <i class="bi bi-calendar2-week-fill text-coral me-2"></i> Daily Workforce Attendance Sheet
+        </h5>
+        <!-- Date Selector -->
+        <div class="d-flex align-items-center gap-2" style="background: var(--ink-02); padding: 4px 8px; border-radius: var(--radius-sm); border: 1px solid var(--ink-10);">
+          <button onclick="changeDate(-1)" class="btn-icon" style="border: none; background: none; font-size: 14px; cursor: pointer; color: var(--ink);"><i class="bi bi-chevron-left"></i></button>
+          <input type="date" id="attDateInput" onchange="loadAttendance()" class="pg-input" style="padding: 4px 10px; font-size: 13px; border: none; background: transparent; font-weight: 700; width: 140px;">
+          <button onclick="changeDate(1)" class="btn-icon" style="border: none; background: none; font-size: 14px; cursor: pointer; color: var(--ink);"><i class="bi bi-chevron-right"></i></button>
+          <button onclick="setDateToday()" class="btn-secondary" style="padding: 3px 10px; font-size: 11px;">Today</button>
+        </div>
+      </div>
+      
+      <!-- Quick Action: Mark All Present -->
+      <div class="d-flex gap-2">
+        <button id="btnMarkAllPresent" onclick="markAllPresent()" class="btn-primary" style="padding: 8px 18px; font-size: 12px; background: #16A34A; box-shadow: none;">
+          <i class="bi bi-check-all me-1"></i> Quick Mark All Present (GPS)
+        </button>
+      </div>
+    </div>
+
+    <!-- Alert / Toast bar -->
+    <div id="attAlert" class="pg-alert d-none mx-4 mt-3"></div>
+
+    <div class="table-responsive">
+      <table class="pg-table" style="margin-bottom: 0;">
+        <thead>
+          <tr>
+            <th>Worker ID</th>
+            <th>Worker Name &amp; Contact</th>
+            <th>Company</th>
+            <th>Role &amp; Shift</th>
+            <th>Check In</th>
+            <th>Check Out</th>
+            <th>Current Status</th>
+            <th style="text-align: right;">Record Action</th>
+          </tr>
+        </thead>
+        <tbody id="attendanceTableBody">
+          <tr><td colspan="8" style="text-align: center; padding: 3rem; color: var(--ink-60);">Loading attendance sheet...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- TAB 2: MY WORKFORCE DIRECTORY -->
+<div id="sectionWorkforce" class="d-none">
+  <div class="content-card">
+    <div class="content-card-header d-flex justify-content-between align-items-center">
+      <h5 style="margin: 0; font-family: var(--font-serif);">
+        <i class="bi bi-people-fill text-coral me-2"></i> Assigned Workforce Directory
+      </h5>
+      <span class="badge-ink" id="workforceCountBadge">0 Workers</span>
+    </div>
+    <div class="content-card-body p-0">
+      <div class="table-responsive">
+        <table class="pg-table" style="margin-bottom: 0;">
+          <thead>
+            <tr>
+              <th>Worker ID</th>
+              <th>Full Name</th>
+              <th>Phone</th>
+              <th>Assigned Company</th>
+              <th>Job Role</th>
+              <th>Deployment Site</th>
+              <th>Shift</th>
+              <th>Joining Date</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="workforceTableBody">
+            <tr><td colspan="9" style="text-align: center; padding: 3rem; color: var(--ink-60);">Loading workforce...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let supervisorData = null;
+let currentAttendanceDate = new Date().toISOString().split('T')[0];
+let currentGPS = { lat: null, lng: null };
+let gpsWatchId = null;
+let gpsFailureCount = 0;
+let gpsCountdownTimer = null;
+
+// ── MANDATORY GPS TRACKER & HEARTBEAT ─────────────────────────────────────────
+function requestGPS(isUserClick = false) {
+  const overlay = document.getElementById('gpsLockOverlay');
+  const statusPill = document.getElementById('gpsStatusPill');
+  const statusText = document.getElementById('gpsStatusText');
+  const lockMsg = document.getElementById('gpsLockMessage');
+
+  if (!navigator.geolocation) {
+    overlay.style.display = 'flex';
+    lockMsg.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-1"></i> Geolocation is not supported by your device browser.';
+    statusText.textContent = 'GPS Unsupported';
+    return;
+  }
+
+  statusText.textContent = 'Acquiring GPS...';
+
+  navigator.geolocation.getCurrentPosition(
+    async pos => {
+      currentGPS.lat = pos.coords.latitude.toFixed(6);
+      currentGPS.lng = pos.coords.longitude.toFixed(6);
+      gpsFailureCount = 0;
+
+      // Unlock dashboard
+      overlay.style.display = 'none';
+      if (gpsCountdownTimer) { clearInterval(gpsCountdownTimer); gpsCountdownTimer = null; }
+
+      statusPill.style.background = 'rgba(22,163,74,0.2)';
+      statusPill.style.color = '#4ade80';
+      statusPill.style.borderColor = 'rgba(74,222,128,0.3)';
+      statusText.textContent = `GPS Live: ${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`;
+
+      // Send live heartbeat ping
+      await pingLocation(currentGPS.lat, currentGPS.lng);
+
+      if (isUserClick) {
+        showToast('📍 GPS Location detected and calibrated successfully!');
+      }
+
+      // Start continuous watcher
+      startGpsWatcher();
+    },
+    err => {
+      console.warn('GPS Error:', err);
+      currentGPS.lat = null;
+      currentGPS.lng = null;
+
+      overlay.style.display = 'flex';
+      statusPill.style.background = 'rgba(239,70,35,0.15)';
+      statusPill.style.color = 'var(--coral)';
+      statusPill.style.borderColor = 'rgba(239,70,35,0.3)';
+      statusText.textContent = 'GPS Inactive (Required)';
+
+      let errorMsg = 'Please enable device GPS / Location permissions to continue.';
+      if (err.code === 1) {
+        errorMsg = 'Location permission was denied. Please allow location access in your browser/device settings.';
+      } else if (err.code === 2) {
+        errorMsg = 'GPS position unavailable. Please ensure your device location/GPS is switched on.';
+      } else if (err.code === 3) {
+        errorMsg = 'GPS detection timed out. Please click "Enable / Retry GPS Location" below.';
+      }
+      lockMsg.innerHTML = `<i class="bi bi-exclamation-triangle-fill me-1"></i> ${errorMsg}`;
+
+      // Notify backend that supervisor is offline
+      notifyOffline();
+    },
+    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+  );
+}
+
+function startGpsWatcher() {
+  if (gpsWatchId !== null) return;
+  if (!navigator.geolocation) return;
+
+  gpsWatchId = navigator.geolocation.watchPosition(
+    pos => {
+      currentGPS.lat = pos.coords.latitude.toFixed(6);
+      currentGPS.lng = pos.coords.longitude.toFixed(6);
+      document.getElementById('gpsLockOverlay').style.display = 'none';
+      document.getElementById('gpsStatusText').textContent = `GPS Live: ${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`;
+      document.getElementById('gpsStatusPill').style.background = 'rgba(22,163,74,0.2)';
+      document.getElementById('gpsStatusPill').style.color = '#4ade80';
+    },
+    err => {
+      console.warn('GPS lost during session:', err);
+      currentGPS.lat = null;
+      currentGPS.lng = null;
+      handleGpsLoss();
+    },
+    { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
+  );
+}
+
+function handleGpsLoss() {
+  const overlay = document.getElementById('gpsLockOverlay');
+  overlay.style.display = 'flex';
+  document.getElementById('gpsStatusText').textContent = 'GPS Lost';
+  document.getElementById('gpsStatusPill').style.background = 'rgba(239,70,35,0.15)';
+  document.getElementById('gpsStatusPill').style.color = 'var(--coral)';
+  
+  let countdown = 15;
+  document.getElementById('gpsLockMessage').innerHTML = `
+    <i class="bi bi-exclamation-triangle-fill me-1"></i> GPS disabled! Please re-enable location within <strong><span id="gpsCountdown">${countdown}</span>s</strong> or you will be automatically logged out.
+  `;
+
+  if (!gpsCountdownTimer) {
+    gpsCountdownTimer = setInterval(() => {
+      countdown--;
+      const el = document.getElementById('gpsCountdown');
+      if (el) el.textContent = countdown;
+      if (countdown <= 0) {
+        clearInterval(gpsCountdownTimer);
+        gpsCountdownTimer = null;
+        logout();
+      }
+    }, 1000);
+  }
+}
+
+async function pingLocation(lat, lng) {
+  if (!lat || !lng) return;
+  const fd = new FormData();
+  fd.append('latitude', lat);
+  fd.append('longitude', lng);
+  await apiPost('/api/v1/supervisor/location/update', fd);
+}
+
+async function notifyOffline() {
+  try {
+    const token = localStorage.getItem('token');
+    if (token) {
+      await fetch('/api/v1/supervisor/location/offline', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+    }
+  } catch(e) {}
+}
+
+// 20-second background heartbeat ping
+setInterval(() => {
+  if (currentGPS.lat && currentGPS.lng) {
+    pingLocation(currentGPS.lat, currentGPS.lng);
+  } else {
+    requestGPS();
+  }
+}, 20000);
+
+// Initial GPS request on page load
+requestGPS();
+
+
+// ── ATTENDANCE ACTIONS ────────────────────────────────────────────────────────
+function setDateToday() {
+  currentAttendanceDate = new Date().toISOString().split('T')[0];
+  document.getElementById('attDateInput').value = currentAttendanceDate;
+  loadAttendance();
+}
+
+function changeDate(delta) {
+  const d = new Date(currentAttendanceDate);
+  d.setDate(d.getDate() + delta);
+  currentAttendanceDate = d.toISOString().split('T')[0];
+  document.getElementById('attDateInput').value = currentAttendanceDate;
+  loadAttendance();
+}
+
+function switchTab(tab) {
+  if (tab === 'attendance') {
+    document.getElementById('sectionAttendance').classList.remove('d-none');
+    document.getElementById('sectionWorkforce').classList.add('d-none');
+    document.getElementById('tabNavAttendance').classList.add('active');
+    document.getElementById('tabNavWorkforce').classList.remove('active');
+  } else {
+    document.getElementById('sectionAttendance').classList.add('d-none');
+    document.getElementById('sectionWorkforce').classList.remove('d-none');
+    document.getElementById('tabNavAttendance').classList.remove('active');
+    document.getElementById('tabNavWorkforce').classList.add('active');
+    renderWorkforceTable();
+  }
+}
+
+async function loadSupervisorProfile() {
+  const data = await apiGet('/api/v1/supervisor/dashboard');
+  if (!data) return;
+  supervisorData = data;
+
+  const s = data.supervisor;
+  document.getElementById('supName').textContent = s.name;
+  document.getElementById('supAssignedCompany').textContent = s.assigned_company || 'All Companies';
+  document.getElementById('supAssignedLocation').textContent = s.assigned_location || (s.area + ', ' + s.city);
+  document.getElementById('supPhone').textContent = s.phone;
+
+  document.getElementById('statTotal').textContent = data.stats.total_workers;
+  document.getElementById('statPresent').textContent = data.stats.present_today;
+  document.getElementById('statAbsent').textContent = data.stats.absent_today;
+  document.getElementById('statPending').textContent = data.stats.pending_today;
+  document.getElementById('workforceCountBadge').textContent = `${data.stats.total_workers} Workers`;
+}
+
+async function loadAttendance() {
+  const dateVal = document.getElementById('attDateInput').value || currentAttendanceDate;
+  currentAttendanceDate = dateVal;
+
+  const res = await apiGet(`/api/v1/supervisor/attendance?date=${dateVal}`);
+  if (!res) return;
+
+  // Update KPI counters
+  document.getElementById('statTotal').textContent = res.total_workers;
+  document.getElementById('statPresent').textContent = res.summary.PRESENT || 0;
+  document.getElementById('statAbsent').textContent = (res.summary.ABSENT || 0) + (res.summary.LEAVE || 0);
+  document.getElementById('statPending').textContent = res.summary.NOT_MARKED || 0;
+
+  renderAttendanceTable(res.records);
+}
+
+function renderAttendanceTable(records) {
+  const tbody = document.getElementById('attendanceTableBody');
+  if (!records || !records.length) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:3rem;color:var(--ink-60);">No workers deployed under your supervision yet.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = records.map(r => {
+    const cin = r.check_in ? r.check_in.substring(0, 5) : '09:00';
+    const cout = r.check_out ? r.check_out.substring(0, 5) : '17:30';
+
+    const statusClass = {
+      'PRESENT': 'background:#EBF8F2; color:#16A34A;',
+      'ABSENT': 'background:#FDF1EE; color:#DC2626;',
+      'HALF_DAY': 'background:#FEF3C7; color:#D97706;',
+      'LEAVE': 'background:#F3F4F6; color:#6B7280;',
+      'NOT_MARKED': 'background:#FFFBEB; color:#B45309;'
+    }[r.status] || '';
+
+    const gpsBadge = r.is_gps_verified ? `
+      <span style="font-size:10px;color:#16A34A;display:block;margin-top:2px;" title="Coordinates: ${r.latitude || '—'}, ${r.longitude || '—'}">
+        <i class="bi bi-geo-alt-fill"></i> GPS Verified
+      </span>
+    ` : '';
+
+    return `
+      <tr>
+        <td><strong class="badge-ink">${escapeHtml(r.worker_id_str || 'PGW-' + r.worker_profile_id)}</strong></td>
+        <td>
+          <div style="font-weight:700;color:var(--ink);">${escapeHtml(r.full_name)}</div>
+          <div style="font-size:12px;color:var(--ink-60);"><i class="bi bi-telephone me-1"></i>${escapeHtml(r.phone)}</div>
+        </td>
+        <td>
+          <div style="font-weight:600;">${escapeHtml(r.company)}</div>
+        </td>
+        <td>
+          <div>${escapeHtml(r.job_role)}</div>
+          <span style="font-size:11px;color:var(--coral);font-weight:600;">${escapeHtml(r.shift)}</span>
+        </td>
+        <td>
+          <input type="time" id="cin_${r.worker_profile_id}" value="${cin}" class="pg-input" style="padding:4px 8px;font-size:12px;width:90px;">
+        </td>
+        <td>
+          <input type="time" id="cout_${r.worker_profile_id}" value="${cout}" class="pg-input" style="padding:4px 8px;font-size:12px;width:90px;">
+        </td>
+        <td>
+          <span class="status-pill" style="${statusClass}">
+            ${r.status === 'NOT_MARKED' ? '⚠️ Not Marked' : r.status}
+          </span>
+          ${gpsBadge}
+        </td>
+        <td style="text-align:right;">
+          <div class="d-flex justify-content-end gap-1 flex-wrap">
+            <button onclick="markWorker(${r.worker_profile_id}, 'PRESENT')" class="btn-primary" style="padding:5px 10px;font-size:11px;background:#16A34A;box-shadow:none;" title="Mark Present">
+              <i class="bi bi-check-lg"></i> Present
+            </button>
+            <button onclick="markWorker(${r.worker_profile_id}, 'ABSENT')" class="btn-primary" style="padding:5px 10px;font-size:11px;background:#DC2626;box-shadow:none;" title="Mark Absent">
+              <i class="bi bi-x-lg"></i> Absent
+            </button>
+            <button onclick="markWorker(${r.worker_profile_id}, 'HALF_DAY')" class="btn-secondary" style="padding:5px 10px;font-size:11px;border-color:#D97706;color:#D97706;" title="Mark Half Day">
+              ½ Day
+            </button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+async function markWorker(workerId, status) {
+  if (!currentGPS.lat || !currentGPS.lng) {
+    alert('🚨 GPS Location is strictly required to mark attendance. Please allow GPS access.');
+    requestGPS(true);
+    return;
+  }
+
+  const cin = document.getElementById(`cin_${workerId}`)?.value || '09:00';
+  const cout = document.getElementById(`cout_${workerId}`)?.value || '17:30';
+
+  const fd = new FormData();
+  fd.append('worker_id', workerId);
+  fd.append('date', currentAttendanceDate);
+  fd.append('status', status);
+  fd.append('check_in', cin);
+  fd.append('check_out', cout);
+  fd.append('latitude', currentGPS.lat);
+  fd.append('longitude', currentGPS.lng);
+
+  const res = await apiPost('/api/v1/supervisor/attendance/mark', fd);
+  if (res) {
+    showToast(`✅ ${res.message}`);
+    loadAttendance();
+  }
+}
+
+async function markAllPresent() {
+  if (!currentGPS.lat || !currentGPS.lng) {
+    alert('🚨 GPS Location is strictly required to mark attendance. Please allow GPS access.');
+    requestGPS(true);
+    return;
+  }
+
+  if (!confirm(`Mark all assigned workers as PRESENT for ${currentAttendanceDate} with GPS location (${currentGPS.lat}, ${currentGPS.lng})?`)) return;
+  const btn = document.getElementById('btnMarkAllPresent');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Marking with GPS...';
+
+  const fd = new FormData();
+  fd.append('date', currentAttendanceDate);
+  fd.append('status', 'PRESENT');
+  fd.append('latitude', currentGPS.lat);
+  fd.append('longitude', currentGPS.lng);
+
+  const res = await apiPost('/api/v1/supervisor/attendance/mark-all', fd);
+  btn.disabled = false;
+  btn.innerHTML = '<i class="bi bi-check-all me-1"></i> Quick Mark All Present (GPS)';
+
+  if (res) {
+    showToast(`✅ ${res.message}`);
+    loadAttendance();
+  }
+}
+
+function showToast(msg) {
+  const alertEl = document.getElementById('attAlert');
+  alertEl.className = 'pg-alert pg-alert-success mx-4 mt-3';
+  alertEl.innerHTML = msg;
+  setTimeout(() => { alertEl.className = 'pg-alert d-none mx-4 mt-3'; }, 3000);
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return str.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+function renderWorkforceTable() {
+  if (!supervisorData || !supervisorData.workers) return;
+  const tbody = document.getElementById('workforceTableBody');
+  if (!supervisorData.workers.length) {
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:3rem;color:var(--ink-60);">No workers assigned under your supervision.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = supervisorData.workers.map(w => `
+    <tr>
+      <td><strong class="badge-ink">${escapeHtml(w.worker_id_str || 'PGW-' + w.id)}</strong></td>
+      <td style="font-weight:700;">${escapeHtml(w.name)}</td>
+      <td>${escapeHtml(w.phone)}</td>
+      <td>${escapeHtml(w.company)}</td>
+      <td>${escapeHtml(w.job_role)}</td>
+      <td><i class="bi bi-geo-alt me-1 text-coral"></i>${escapeHtml(w.area || 'Plant Site')}</td>
+      <td><span class="badge-peach">${escapeHtml(w.shift)}</span></td>
+      <td>${escapeHtml(w.joining_date || '—')}</td>
+      <td><span class="status-pill status-selected"><i class="bi bi-check-circle-fill me-1"></i> Active</span></td>
+    </tr>
+  `).join('');
+}
+
+// Initial Boot
+document.getElementById('attDateInput').value = currentAttendanceDate;
+loadSupervisorProfile();
+loadAttendance();
+</script>
+{% endblock %}

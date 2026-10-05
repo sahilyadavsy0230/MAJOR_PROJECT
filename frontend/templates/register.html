@@ -1,0 +1,344 @@
+{% extends "base.html" %}
+{% block title %}Candidate Registration – Prashant Group{% endblock %}
+
+{% block content %}
+<section class="section" style="padding-top: 140px; min-height: 100vh;">
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-lg-8 col-md-10">
+        
+        <div class="text-center mb-5 fade-up">
+          <div class="hero-badge">
+            <i class="bi bi-person-badge"></i> Job Seeker Portal
+          </div>
+          <h1 style="font-size: clamp(2.5rem, 5vw, 4.5rem); margin-bottom: 0.5rem;">Register as a <em>Candidate</em></h1>
+          <p style="color: var(--ink-60); font-size: 16px; max-width: 540px; margin: 0 auto;">
+            Complete your profile to apply for industrial jobs with verified client companies.
+          </p>
+        </div>
+
+        <div class="content-card fade-up fade-up-d1" style="padding: 3rem; border-radius: var(--radius-lg);">
+          <div id="regAlert" class="pg-alert d-none"></div>
+
+          <form id="candidateRegisterForm" enctype="multipart/form-data">
+            
+            <!-- SECTION 1: Personal Details -->
+            <div class="mb-4">
+              <h4 style="font-family: var(--font-serif); font-size: 1.5rem; border-bottom: 1px solid var(--ink-05); padding-bottom: 0.75rem; margin-bottom: 1.5rem;">
+                1. Personal Details
+              </h4>
+              
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label class="pg-form-label">Full Name *</label>
+                  <input type="text" name="full_name" class="pg-input" placeholder="e.g. Rahul Sharma" required>
+                </div>
+
+                <div class="col-md-6">
+                  <label class="pg-form-label">Mobile Number *</label>
+                  <input type="tel" name="phone" class="pg-input" placeholder="10-digit number" required>
+                </div>
+
+                <div class="col-md-6">
+                  <label class="pg-form-label">Email Address *</label>
+                  <input type="email" name="email" class="pg-input" placeholder="e.g. rahul@gmail.com" required>
+                </div>
+
+                <div class="col-md-6">
+                  <label class="pg-form-label">Password *</label>
+                  <input type="password" name="password" class="pg-input" placeholder="At least 6 characters" required minlength="6">
+                </div>
+
+                <div class="col-md-4">
+                  <label class="pg-form-label">Date of Birth</label>
+                  <input type="date" name="dob" id="dobInput" class="pg-input" onchange="calcAge(this.value)">
+                </div>
+
+                <div class="col-md-4">
+                  <label class="pg-form-label">Age</label>
+                  <input type="number" name="age" id="ageInput" class="pg-input" placeholder="Age in years">
+                </div>
+
+                <div class="col-md-4">
+                  <label class="pg-form-label">Gender</label>
+                  <select name="gender" class="pg-input">
+                    <option value="">Select Gender</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+
+                <div class="col-md-6">
+                  <label class="pg-form-label">Current Address</label>
+                  <input type="text" name="current_address" class="pg-input" placeholder="Current address details">
+                </div>
+
+                <div class="col-md-6">
+                  <label class="pg-form-label">Permanent Address</label>
+                  <input type="text" name="permanent_address" class="pg-input" placeholder="Permanent address details">
+                </div>
+
+                <div class="col-md-4">
+                  <label class="pg-form-label">City *</label>
+                  <input type="text" name="city" class="pg-input" placeholder="e.g. Pune" required>
+                </div>
+
+                <div class="col-md-4">
+                  <label class="pg-form-label">State *</label>
+                  <input type="text" name="state" class="pg-input" placeholder="e.g. Maharashtra" required>
+                </div>
+
+                <div class="col-md-4">
+                  <label class="pg-form-label">PIN Code *</label>
+                  <input type="text" name="pin_code" class="pg-input" placeholder="e.g. 411033" required>
+                </div>
+              </div>
+            </div>
+
+            <!-- SECTION 2: Educational Details -->
+            <div class="mb-4 pt-3" style="border-top: 1px solid var(--ink-05);">
+              <h4 style="font-family: var(--font-serif); font-size: 1.5rem; border-bottom: 1px solid var(--ink-05); padding-bottom: 0.75rem; margin-bottom: 1.5rem;">
+                2. Educational & Experience Details
+              </h4>
+              
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label class="pg-form-label">Highest Qualification *</label>
+                  <select name="qualification" class="pg-input" required>
+                    <option value="">Select Qualification</option>
+                    <option value="10th">10th</option>
+                    <option value="12th">12th</option>
+                    <option value="Diploma">Diploma</option>
+                    <option value="ITI">ITI</option>
+                    <option value="Graduation">Graduation</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+
+                <div class="col-md-6">
+                  <label class="pg-form-label">Experience</label>
+                  <select name="experience" class="pg-input">
+                    <option value="Fresher">Fresher</option>
+                    <option value="1-2 Years">1-2 Years</option>
+                    <option value="3-5 Years">3-5 Years</option>
+                    <option value="5+ Years">5+ Years</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- SECTION 3: Job Preferences -->
+            <div class="mb-4 pt-3" style="border-top: 1px solid var(--ink-05);">
+              <h4 style="font-family: var(--font-serif); font-size: 1.5rem; border-bottom: 1px solid var(--ink-05); padding-bottom: 0.75rem; margin-bottom: 1.5rem;">
+                3. Job Preferences
+              </h4>
+              
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label class="pg-form-label">Preferred Job Role *</label>
+                  <select name="preferred_job" class="pg-input" required>
+                    <option value="">Select Role</option>
+                    <option value="Picker">Picker</option>
+                    <option value="Packer">Packer</option>
+                    <option value="Loader">Loader</option>
+                    <option value="Driver">Driver</option>
+                    <option value="Delivery Boy">Delivery Boy</option>
+                    <option value="Security Guard">Security Guard</option>
+                    <option value="Warehouse Worker">Warehouse Worker</option>
+                    <option value="Helper">Helper</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+
+                <div class="col-md-6">
+                  <label class="pg-form-label">Preferred Location</label>
+                  <input type="text" name="preferred_location" class="pg-input" placeholder="e.g. Pune, Mumbai, Chakan">
+                </div>
+
+                <div class="col-md-4">
+                  <label class="pg-form-label">Expected Salary</label>
+                  <input type="text" name="expected_salary" class="pg-input" placeholder="e.g. ₹15,000/month">
+                </div>
+
+                <div class="col-md-4">
+                  <label class="pg-form-label">Preferred Shift</label>
+                  <select name="preferred_shift" class="pg-input">
+                    <option value="Day">Day</option>
+                    <option value="Night">Night</option>
+                    <option value="Rotational">Rotational</option>
+                    <option value="Any">Any</option>
+                  </select>
+                </div>
+
+                <div class="col-md-4">
+                  <label class="pg-form-label">How did you find us?</label>
+                  <select name="source" class="pg-input">
+                    <option value="Social Media">Social Media</option>
+                    <option value="Friend/Referral">Friend / Referral</option>
+                    <option value="Newspaper">Newspaper</option>
+                    <option value="Direct Walk-in">Direct Walk-in</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- SECTION 4: Mandatory Profile Photo -->
+            <div class="mb-4 pt-3" style="border-top: 1px solid var(--ink-05);">
+              <h4 style="font-family: var(--font-serif); font-size: 1.5rem; border-bottom: 1px solid var(--ink-05); padding-bottom: 0.75rem; margin-bottom: 1.5rem;">
+                4. Profile Photo (Mandatory)
+              </h4>
+              <div class="row g-3 align-items-center">
+                <div class="col-md-8">
+                  <label class="pg-form-label">Upload Passport / Profile Photo * (JPEG, PNG, WebP)</label>
+                  <input type="file" name="profile_photo" class="pg-input" accept="image/jpeg,image/png,image/webp" required onchange="previewPhoto(this)">
+                  <small style="color: var(--ink-60); font-size: 12px;">This photo will be displayed on your verified identity and admin cards.</small>
+                </div>
+                <div class="col-md-4 text-center">
+                  <div id="photoPreview" class="candidate-avatar mx-auto" style="width: 80px; height: 80px; border-radius: var(--radius-sm); border: 2px dashed var(--ink-10);">
+                    <i class="bi bi-person-bounding-box" style="font-size: 2rem; color: var(--ink-60);"></i>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- SECTION 5: KYC & Educational Documents -->
+            <div class="mb-4 pt-3" style="border-top: 1px solid var(--ink-05);">
+              <h4 style="font-family: var(--font-serif); font-size: 1.5rem; border-bottom: 1px solid var(--ink-05); padding-bottom: 0.75rem; margin-bottom: 0.5rem;">
+                5. Identity & Educational Documents
+
+              </h4>
+              <p style="font-size: 13px; color: var(--ink-60); margin-bottom: 1.5rem;">
+                Submit your KYC documents (mandatory) and educational certificates (optional). Files will be reviewed by our HR team.
+              </p>
+
+              <!-- Mandatory KYC -->
+              <div style="background: #FDF1EE; border-left: 4px solid var(--coral); border-radius: 8px; padding: 1rem 1.25rem; margin-bottom: 1.25rem;">
+                <p style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--coral); margin: 0 0 1rem;">
+                  <i class="bi bi-shield-check me-1"></i> Mandatory KYC Documents
+                </p>
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <label class="pg-form-label">Aadhaar Card * <span style="font-weight:400;color:var(--ink-60);">(PDF / JPG / PNG)</span></label>
+                    <input type="file" name="aadhaar_card" class="pg-input" accept=".pdf,image/jpeg,image/png" required>
+                    <small style="color:var(--ink-60);font-size:11px;">Both sides in a single file preferred</small>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="pg-form-label">PAN Card * <span style="font-weight:400;color:var(--ink-60);">(PDF / JPG / PNG)</span></label>
+                    <input type="file" name="pan_card" class="pg-input" accept=".pdf,image/jpeg,image/png" required>
+                    <small style="color:var(--ink-60);font-size:11px;">Clear and legible scan required</small>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Optional Educational -->
+              <div style="background: var(--ink-02); border-left: 4px solid var(--ink-10); border-radius: 8px; padding: 1rem 1.25rem;">
+                <p style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-60); margin: 0 0 1rem;">
+                  <i class="bi bi-mortarboard me-1"></i> Educational Documents <span style="font-weight:400;text-transform:none;">(Optional — upload if available)</span>
+                </p>
+                <div class="row g-3">
+                  <div class="col-md-4">
+                    <label class="pg-form-label">10th Marksheet <span style="font-weight:400;color:var(--ink-60);">(PDF / JPG)</span></label>
+                    <input type="file" name="marksheet_10th" class="pg-input" accept=".pdf,image/jpeg,image/png">
+                  </div>
+                  <div class="col-md-4">
+                    <label class="pg-form-label">12th Marksheet <span style="font-weight:400;color:var(--ink-60);">(PDF / JPG)</span></label>
+                    <input type="file" name="marksheet_12th" class="pg-input" accept=".pdf,image/jpeg,image/png">
+                  </div>
+                  <div class="col-md-4">
+                    <label class="pg-form-label">Graduation Certificate <span style="font-weight:400;color:var(--ink-60);">(PDF / JPG)</span></label>
+                    <input type="file" name="graduation_certificate" class="pg-input" accept=".pdf,image/jpeg,image/png">
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            <button type="submit" id="submitBtn" class="btn-primary w-100 mt-4" style="width: 100%; justify-content: center; padding: 16px; font-size: 14px;">
+              <i class="bi bi-check2-circle"></i> Complete Candidate Registration
+            </button>
+          </form>
+
+
+          <div class="text-center mt-4 pt-3" style="border-top: 1px solid var(--ink-05);">
+            <p style="font-size: 14px; color: var(--ink-60); margin-bottom: 0.5rem;">
+              Already registered? <a href="/login" style="color: var(--coral); font-weight: 700;">Sign in here</a>
+            </p>
+            <p style="font-size: 13px; color: var(--ink-60); margin: 0;">
+              Looking for supervisor registration? <a href="/register/supervisor" style="color: var(--ink); font-weight: 600;">Supervisor Portal</a>
+            </p>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function calcAge(dobStr) {
+  if (!dobStr) return;
+  const dob = new Date(dobStr);
+  const diff = Date.now() - dob.getTime();
+  const ageDate = new Date(diff);
+  const age = Math.abs(ageDate.getUTCFullYear() - 1970);
+  if (!isNaN(age)) {
+    document.getElementById('ageInput').value = age;
+  }
+}
+
+function previewPhoto(input) {
+  if (input.files && input.files[0]) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      document.getElementById('photoPreview').innerHTML = `<img src="${e.target.result}" style="width:100%; height:100%; object-fit:cover; border-radius:inherit;">`;
+    }
+    reader.readAsDataURL(input.files[0]);
+  }
+}
+
+document.getElementById('candidateRegisterForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const alertEl = document.getElementById('regAlert');
+  const btn = document.getElementById('submitBtn');
+  
+  alertEl.className = 'pg-alert d-none';
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Registering candidate profile...';
+
+  try {
+    const formData = new FormData(e.target);
+    const response = await fetch('/api/v1/auth/register', {
+      method: 'POST',
+      body: formData
+    });
+
+    const resData = await response.json();
+    if (response.ok) {
+      alertEl.className = 'pg-alert pg-alert-success';
+      alertEl.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i> Registration successful! Redirecting to login...';
+      alertEl.classList.remove('d-none');
+      e.target.reset();
+      setTimeout(() => {
+        window.location.href = '/login';
+      }, 1500);
+    } else {
+      alertEl.className = 'pg-alert pg-alert-error';
+      alertEl.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-2"></i> ' + (resData.detail || 'Registration failed.');
+      alertEl.classList.remove('d-none');
+    }
+  } catch (err) {
+    alertEl.className = 'pg-alert pg-alert-error';
+    alertEl.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-2"></i> Server communication error. Please try again.';
+    alertEl.classList.remove('d-none');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-check2-circle"></i> Complete Candidate Registration';
+  }
+});
+</script>
+{% endblock %}

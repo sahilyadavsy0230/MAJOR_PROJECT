@@ -1,0 +1,342 @@
+{% extends "dashboard_base.html" %}
+{% block title %}Analytics – Admin{% endblock %}
+
+{% block sidebar %}
+  <div class="sidebar-label">Main</div>
+  <a href="/dashboard/admin" class="sidebar-link"><i class="bi bi-speedometer2"></i> Overview</a>
+  <a href="/dashboard/admin/analytics" class="sidebar-link active"><i class="bi bi-bar-chart-fill"></i> Analytics</a>
+  <div class="sidebar-label">Recruitment</div>
+  <a href="/dashboard/admin/jobs" class="sidebar-link"><i class="bi bi-briefcase"></i> Jobs &amp; Applications</a>
+  <a href="/dashboard/admin/candidates" class="sidebar-link"><i class="bi bi-people"></i> Candidates</a>
+  <a href="/dashboard/admin/workers" class="sidebar-link"><i class="bi bi-person-badge"></i> Workers</a>
+  <div class="sidebar-label">Management</div>
+  <a href="/dashboard/admin/supervisors" class="sidebar-link"><i class="bi bi-person-gear"></i> Supervisors</a>
+{% endblock %}
+
+{% block content %}
+<div class="dash-header">
+  <div>
+    <h1 class="dash-title">Analytics</h1>
+    <p style="margin:4px 0 0;color:var(--ink-60);font-size:13px;">Company-wise workforce breakdown, recruitment pipeline, attendance insights and monthly trends.</p>
+  </div>
+  <span id="analyticsDate" style="font-size:13px;color:var(--ink-60);"></span>
+</div>
+
+<!-- ── TOP SUMMARY TILES ──────────────────────────────────────────────────── -->
+<div class="row g-3 mb-4" id="summaryTiles">
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:linear-gradient(135deg,#2D3B42,#1a2327);"><i class="bi bi-person-badge-fill"></i></div>
+      <div class="stat-val" id="sWorkers">—</div>
+      <div class="stat-lab">Active Workers</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:linear-gradient(135deg,#c0392b,#e74c3c);"><i class="bi bi-buildings-fill"></i></div>
+      <div class="stat-val" id="sCompanies">—</div>
+      <div class="stat-lab">Client Companies</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:linear-gradient(135deg,#16a085,#1abc9c);"><i class="bi bi-person-gear"></i></div>
+      <div class="stat-val" id="sSupervisors">—</div>
+      <div class="stat-lab">Active Supervisors</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:linear-gradient(135deg,#8e44ad,#9b59b6);"><i class="bi bi-people-fill"></i></div>
+      <div class="stat-val" id="sCandidates">—</div>
+      <div class="stat-lab">Total Candidates</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── CHARTS ROW 1: Company Workers + Funnel ────────────────────────────── -->
+<div class="row g-3 mb-4">
+  <!-- Company-wise Workers Bar Chart -->
+  <div class="col-lg-7">
+    <div class="content-card h-100">
+      <div class="content-card-header" style="display:flex;justify-content:space-between;align-items:center;">
+        <h5 style="margin:0;font-family:var(--font-serif);">
+          <i class="bi bi-bar-chart-fill text-coral me-2"></i>Company-wise Deployed Workers
+        </h5>
+        <span id="companyTotalBadge" class="status-pill status-selected" style="font-size:11px;"></span>
+      </div>
+      <div class="content-card-body" style="padding:1.25rem;">
+        <div style="position:relative;height:280px;">
+          <canvas id="companyWorkersChart"></canvas>
+        </div>
+        <div id="noCompanyData" style="display:none;text-align:center;padding:3rem;color:var(--ink-40);">
+          <i class="bi bi-bar-chart" style="font-size:2.5rem;"></i>
+          <p style="margin:8px 0 0;">No active deployments yet.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Application Funnel Doughnut -->
+  <div class="col-lg-5">
+    <div class="content-card h-100">
+      <div class="content-card-header">
+        <h5 style="margin:0;font-family:var(--font-serif);">
+          <i class="bi bi-pie-chart-fill text-coral me-2"></i>Recruitment Pipeline
+        </h5>
+      </div>
+      <div class="content-card-body" style="padding:1.25rem;">
+        <div style="position:relative;height:220px;margin:0 auto;max-width:260px;">
+          <canvas id="funnelChart"></canvas>
+        </div>
+        <div id="funnelLegend" style="display:flex;flex-wrap:wrap;justify-content:center;gap:8px 16px;margin-top:12px;font-size:12px;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── CHARTS ROW 2: Attendance Today + Top Locations + Monthly Trend ─────── -->
+<div class="row g-3 mb-4">
+
+  <!-- Attendance Today -->
+  <div class="col-lg-4">
+    <div class="content-card h-100">
+      <div class="content-card-header">
+        <h5 style="margin:0;font-family:var(--font-serif);">
+          <i class="bi bi-calendar-check-fill text-coral me-2"></i>Attendance Today
+        </h5>
+      </div>
+      <div class="content-card-body" style="padding:1.25rem;">
+        <!-- Donut mini -->
+        <div style="position:relative;height:160px;max-width:180px;margin:0 auto 1rem;">
+          <canvas id="attendanceChart"></canvas>
+          <div id="attendanceTotalLabel" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;pointer-events:none;">
+            <span id="attTotalNum" style="font-size:2rem;font-weight:800;font-family:var(--font-serif);">—</span>
+            <span style="font-size:11px;color:var(--ink-60);">Marked</span>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <span style="display:flex;align-items:center;gap:8px;font-size:13px;"><span style="width:12px;height:12px;border-radius:3px;background:#16a34a;display:inline-block;"></span> Present</span>
+            <strong id="attPresent">—</strong>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <span style="display:flex;align-items:center;gap:8px;font-size:13px;"><span style="width:12px;height:12px;border-radius:3px;background:#dc2626;display:inline-block;"></span> Absent</span>
+            <strong id="attAbsent">—</strong>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <span style="display:flex;align-items:center;gap:8px;font-size:13px;"><span style="width:12px;height:12px;border-radius:3px;background:#d97706;display:inline-block;"></span> Half Day</span>
+            <strong id="attHalf">—</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Top Deployment Locations -->
+  <div class="col-lg-4">
+    <div class="content-card h-100">
+      <div class="content-card-header">
+        <h5 style="margin:0;font-family:var(--font-serif);">
+          <i class="bi bi-geo-alt-fill text-coral me-2"></i>Top Deployment Sites
+        </h5>
+      </div>
+      <div class="content-card-body" style="padding:1.25rem;">
+        <div id="topLocations" style="display:flex;flex-direction:column;gap:12px;">
+          <p style="color:var(--ink-40);text-align:center;padding:2rem 0;">Loading...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Monthly Trend Line -->
+  <div class="col-lg-4">
+    <div class="content-card h-100">
+      <div class="content-card-header">
+        <h5 style="margin:0;font-family:var(--font-serif);">
+          <i class="bi bi-graph-up-arrow text-coral me-2"></i>Monthly Applications
+        </h5>
+      </div>
+      <div class="content-card-body" style="padding:1.25rem;">
+        <div style="position:relative;height:220px;">
+          <canvas id="monthlyChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script>
+document.getElementById('analyticsDate').textContent = new Date().toLocaleDateString('en-IN', {weekday:'long', year:'numeric', month:'long', day:'numeric'});
+
+// Chart.js global defaults
+Chart.defaults.font.family = "'Inter', sans-serif";
+Chart.defaults.color = '#666';
+
+let companyChart = null, funnelChartObj = null, attendanceChartObj = null, monthlyChartObj = null;
+
+const COMPANY_PALETTE = [
+  '#c0392b','#2D3B42','#16a085','#8e44ad','#d97706','#1e40af','#065f46','#7c3aed',
+  '#b45309','#0e7490','#be185d','#15803d','#6d28d9','#b91c1c','#0369a1',
+];
+
+async function loadAnalytics() {
+  const data = await apiGet('/api/v1/admin/analytics');
+  if (!data) return;
+
+  // ── Summary Tiles
+  document.getElementById('sWorkers').textContent    = data.summary.total_workers;
+  document.getElementById('sCompanies').textContent  = data.summary.total_companies;
+  document.getElementById('sSupervisors').textContent= data.summary.active_supervisors;
+  document.getElementById('sCandidates').textContent = data.summary.total_candidates;
+
+  // ── Company-wise Workers Bar Chart
+  const cwData = data.company_wise_workers;
+  if (cwData && cwData.length) {
+    document.getElementById('companyTotalBadge').textContent = `${cwData.reduce((s,c)=>s+c.worker_count,0)} Workers Total`;
+    const ctx = document.getElementById('companyWorkersChart').getContext('2d');
+    if (companyChart) companyChart.destroy();
+    companyChart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: cwData.map(c => c.company),
+        datasets: [{
+          label: 'Workers',
+          data: cwData.map(c => c.worker_count),
+          backgroundColor: cwData.map((_, i) => COMPANY_PALETTE[i % COMPANY_PALETTE.length]),
+          borderRadius: 6,
+          borderSkipped: false,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${ctx.raw} workers` } } },
+        scales: {
+          y: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: '#f0f0f0' } },
+          x: { grid: { display: false }, ticks: { maxRotation: 30 } }
+        }
+      }
+    });
+  } else {
+    document.getElementById('companyWorkersChart').style.display = 'none';
+    document.getElementById('noCompanyData').style.display = 'block';
+  }
+
+  // ── Recruitment Funnel Doughnut
+  const fn = data.application_funnel;
+  const funnelColors = ['#3b82f6','#ca8a04','#9333ea','#16a34a','#dc2626'];
+  const funnelLabels = ['Applied','Shortlisted','Interview','Selected','Rejected'];
+  const funnelVals = [fn.applied, fn.shortlisted, fn.interview, fn.selected, fn.rejected];
+  const fCtx = document.getElementById('funnelChart').getContext('2d');
+  if (funnelChartObj) funnelChartObj.destroy();
+  funnelChartObj = new Chart(fCtx, {
+    type: 'doughnut',
+    data: {
+      labels: funnelLabels,
+      datasets: [{ data: funnelVals, backgroundColor: funnelColors, borderWidth: 2, borderColor: '#fff', hoverOffset: 6 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      cutout: '65%',
+      plugins: { legend: { display: false } }
+    }
+  });
+  document.getElementById('funnelLegend').innerHTML = funnelLabels.map((l,i) =>
+    `<span style="display:flex;align-items:center;gap:5px;">
+      <span style="width:10px;height:10px;border-radius:50%;background:${funnelColors[i]};flex-shrink:0;"></span>
+      ${l}: <b>${funnelVals[i]}</b>
+    </span>`
+  ).join('');
+
+  // ── Attendance Today Doughnut
+  const att = data.attendance_today;
+  document.getElementById('attPresent').textContent = att.present;
+  document.getElementById('attAbsent').textContent  = att.absent;
+  document.getElementById('attHalf').textContent    = att.half_day;
+  document.getElementById('attTotalNum').textContent = att.total;
+  const aCtx = document.getElementById('attendanceChart').getContext('2d');
+  if (attendanceChartObj) attendanceChartObj.destroy();
+  attendanceChartObj = new Chart(aCtx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Present','Absent','Half Day'],
+      datasets: [{
+        data: [att.present || 0, att.absent || 0, att.half_day || 0],
+        backgroundColor: ['#16a34a','#dc2626','#d97706'],
+        borderWidth: 2, borderColor: '#fff', hoverOffset: 4
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      cutout: '72%',
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ` ${c.raw}` } } }
+    }
+  });
+
+  // ── Top Locations
+  const locs = data.top_locations;
+  const locContainer = document.getElementById('topLocations');
+  if (!locs || !locs.length) {
+    locContainer.innerHTML = '<p style="color:var(--ink-40);text-align:center;padding:2rem 0;">No deployment location data yet.</p>';
+  } else {
+    const maxCount = Math.max(...locs.map(l => l.count));
+    locContainer.innerHTML = locs.map((l, i) => `
+      <div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px;font-size:13px;">
+          <span style="font-weight:600;">${escapeHtml(l.location || 'Unknown')}</span>
+          <span style="color:var(--ink-60);">${l.count} workers</span>
+        </div>
+        <div style="height:6px;background:#f0f0f0;border-radius:3px;overflow:hidden;">
+          <div style="height:100%;width:${Math.round((l.count/maxCount)*100)}%;background:${COMPANY_PALETTE[i % COMPANY_PALETTE.length]};border-radius:3px;transition:width 1s ease;"></div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // ── Monthly Applications Line Chart
+  const mData = data.monthly_applications;
+  const mCtx = document.getElementById('monthlyChart').getContext('2d');
+  if (monthlyChartObj) monthlyChartObj.destroy();
+  monthlyChartObj = new Chart(mCtx, {
+    type: 'line',
+    data: {
+      labels: mData.map(m => {
+        const [y, mo] = m.month.split('-');
+        return new Date(y, parseInt(mo)-1).toLocaleString('en-IN', {month:'short', year:'2-digit'});
+      }),
+      datasets: [{
+        label: 'Applications',
+        data: mData.map(m => m.count),
+        borderColor: '#c0392b',
+        backgroundColor: 'rgba(192,57,43,0.08)',
+        pointBackgroundColor: '#c0392b',
+        pointRadius: 5,
+        pointHoverRadius: 7,
+        tension: 0.4,
+        fill: true,
+        borderWidth: 2.5,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: '#f5f5f5' } },
+        x: { grid: { display: false } }
+      }
+    }
+  });
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+loadAnalytics();
+</script>
+{% endblock %}

@@ -1,0 +1,126 @@
+{% extends "dashboard_base.html" %}
+{% block title %}Admin Dashboard – Prashant Group{% endblock %}
+
+{% block sidebar %}
+  <div class="sidebar-label">Main</div>
+  <a href="/dashboard/admin" class="sidebar-link active"><i class="bi bi-speedometer2"></i> Overview</a>
+  <a href="/dashboard/admin/analytics" class="sidebar-link"><i class="bi bi-bar-chart-fill"></i> Analytics</a>
+  <div class="sidebar-label">Recruitment</div>
+  <a href="/dashboard/admin/jobs" class="sidebar-link"><i class="bi bi-briefcase"></i> Jobs & Applications</a>
+  <a href="/dashboard/admin/candidates" class="sidebar-link"><i class="bi bi-people"></i> Candidates</a>
+  <a href="/dashboard/admin/workers" class="sidebar-link"><i class="bi bi-person-badge"></i> Workers</a>
+  <div class="sidebar-label">Management</div>
+  <a href="/dashboard/admin/supervisors" class="sidebar-link"><i class="bi bi-person-gear"></i> Supervisors</a>
+{% endblock %}
+
+{% block content %}
+<div class="dash-header">
+  <h1 class="dash-title">Overview</h1>
+  <span id="todayDate" style="font-size:14px; color:var(--ink-60);"></span>
+</div>
+
+<!-- Stat Cards -->
+<div class="row g-3 mb-4" id="statsGrid">
+  <div class="col-lg-3 col-md-4 col-6">
+    <div class="stat-card"><div class="stat-icon"><i class="bi bi-people-fill"></i></div><div class="stat-val" id="sCandidates">—</div><div class="stat-lab">Candidates</div></div>
+  </div>
+  <div class="col-lg-3 col-md-4 col-6">
+    <div class="stat-card"><div class="stat-icon"><i class="bi bi-person-badge-fill"></i></div><div class="stat-val" id="sWorkers">—</div><div class="stat-lab">Active Workers</div></div>
+  </div>
+  <div class="col-lg-3 col-md-4 col-6">
+    <div class="stat-card"><div class="stat-icon"><i class="bi bi-briefcase-fill"></i></div><div class="stat-val" id="sJobs">—</div><div class="stat-lab">Open Jobs</div></div>
+  </div>
+  <div class="col-lg-3 col-md-4 col-6">
+    <div class="stat-card"><div class="stat-icon"><i class="bi bi-inbox-fill"></i></div><div class="stat-val" id="sPending">—</div><div class="stat-lab">Pending Applications</div></div>
+  </div>
+  <div class="col-lg-3 col-md-4 col-6">
+    <div class="stat-card"><div class="stat-icon"><i class="bi bi-bookmark-star-fill"></i></div><div class="stat-val" id="sShortlisted">—</div><div class="stat-lab">Shortlisted</div></div>
+  </div>
+  <div class="col-lg-3 col-md-4 col-6">
+    <div class="stat-card"><div class="stat-icon"><i class="bi bi-calendar-event-fill"></i></div><div class="stat-val" id="sInterviews">—</div><div class="stat-lab">Interviews Scheduled</div></div>
+  </div>
+  <div class="col-lg-3 col-md-4 col-6">
+    <div class="stat-card"><div class="stat-icon"><i class="bi bi-check-circle-fill"></i></div><div class="stat-val" id="sSelected">—</div><div class="stat-lab">Selected</div></div>
+  </div>
+  <div class="col-lg-3 col-md-4 col-6">
+    <div class="stat-card"><div class="stat-icon"><i class="bi bi-person-gear"></i></div><div class="stat-val" id="sSupervisors">—</div><div class="stat-lab">Active Supervisors</div></div>
+  </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row g-3 mb-4">
+  <div class="col-md-6">
+    <div class="content-card h-100">
+      <div class="content-card-header">
+        <h5 style="margin:0; font-family:var(--font-serif);">Quick Actions</h5>
+      </div>
+      <div class="content-card-body">
+        <div class="d-flex flex-column" style="gap:0.75rem;">
+          <a href="/dashboard/admin/jobs" class="btn-primary" style="justify-content:flex-start; gap:12px;"><i class="bi bi-briefcase"></i> View Jobs & Applications</a>
+          <a href="/dashboard/admin/candidates" class="btn-secondary" style="justify-content:flex-start; gap:12px;"><i class="bi bi-people"></i> Browse Candidates</a>
+          <a href="/dashboard/admin/workers" class="btn-secondary" style="justify-content:flex-start; gap:12px;"><i class="bi bi-person-badge"></i> Manage Workers</a>
+          <a href="/dashboard/admin/supervisors" class="btn-secondary" style="justify-content:flex-start; gap:12px;"><i class="bi bi-person-gear"></i> Approve Supervisors <span id="pendingSupBadge" class="status-pill status-pending ms-auto d-none"></span></a>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="content-card h-100">
+      <div class="content-card-header">
+        <h5 style="margin:0; font-family:var(--font-serif);">Pipeline Summary</h5>
+      </div>
+      <div class="content-card-body">
+        <div id="pipelineSummary">Loading...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('todayDate').textContent = new Date().toLocaleDateString('en-IN', {weekday:'long', year:'numeric', month:'long', day:'numeric'});
+
+async function loadStats() {
+  const data = await apiGet('/api/v1/admin/dashboard/stats');
+  if (!data) return;
+  document.getElementById('sCandidates').textContent  = data.total_candidates;
+  document.getElementById('sWorkers').textContent     = data.total_workers;
+  document.getElementById('sJobs').textContent        = data.total_jobs;
+  document.getElementById('sPending').textContent     = data.pending_applications;
+  document.getElementById('sShortlisted').textContent = data.shortlisted;
+  document.getElementById('sInterviews').textContent  = data.interviews;
+  document.getElementById('sSelected').textContent    = data.selected;
+  document.getElementById('sSupervisors').textContent = data.active_supervisors;
+
+  if (data.pending_supervisors > 0) {
+    const b = document.getElementById('pendingSupBadge');
+    b.textContent = data.pending_supervisors + ' Pending';
+    b.classList.remove('d-none');
+  }
+
+  document.getElementById('pipelineSummary').innerHTML = `
+    <div style="display:flex; flex-direction:column; gap:12px;">
+      ${pipelineRow('Applied',     data.pending_applications, '#3b82f6')}
+      ${pipelineRow('Shortlisted', data.shortlisted,           '#ca8a04')}
+      ${pipelineRow('Interview',   data.interviews,            '#9333ea')}
+      ${pipelineRow('Selected',    data.selected,              '#16a34a')}
+      ${pipelineRow('Rejected',    data.rejected,              '#dc2626')}
+    </div>
+  `;
+}
+
+function pipelineRow(label, val, color) {
+  return `<div style="display:flex; align-items:center; gap:12px;">
+    <span style="font-size:13px; font-weight:600; width:90px; color:var(--ink-60);">${label}</span>
+    <div style="flex:1; height:8px; background:#f0f0f0; border-radius:4px; overflow:hidden;">
+      <div style="height:100%; width:${Math.min(val * 5, 100)}%; background:${color}; border-radius:4px; transition:width 1s var(--ease-out-expo);"></div>
+    </div>
+    <span style="font-size:13px; font-weight:700; width:30px; text-align:right;">${val}</span>
+  </div>`;
+}
+
+loadStats();
+</script>
+{% endblock %}

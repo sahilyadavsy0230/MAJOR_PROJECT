@@ -1,0 +1,408 @@
+{% extends "dashboard_base.html" %}
+{% block title %}Deployed Workers – Admin{% endblock %}
+
+{% block sidebar %}
+  <div class="sidebar-label">Main</div>
+  <a href="/dashboard/admin" class="sidebar-link"><i class="bi bi-speedometer2"></i> Overview</a>
+  <a href="/dashboard/admin/analytics" class="sidebar-link"><i class="bi bi-bar-chart-fill"></i> Analytics</a>
+  <div class="sidebar-label">Recruitment</div>
+  <a href="/dashboard/admin/jobs" class="sidebar-link"><i class="bi bi-briefcase"></i> Jobs &amp; Applications</a>
+  <a href="/dashboard/admin/candidates" class="sidebar-link"><i class="bi bi-people"></i> Candidates</a>
+  <a href="/dashboard/admin/workers" class="sidebar-link active"><i class="bi bi-person-badge"></i> Workers</a>
+  <div class="sidebar-label">Management</div>
+  <a href="/dashboard/admin/supervisors" class="sidebar-link"><i class="bi bi-person-gear"></i> Supervisors</a>
+{% endblock %}
+
+{% block content %}
+<div class="dash-header">
+  <div>
+    <h1 class="dash-title">Deployed Workforce</h1>
+    <p style="margin: 4px 0 0; color: var(--ink-60); font-size: 13px;">
+      Active industrial employees deployed at client sites, payroll management, GPS-verified attendance records, and contract terminations.
+    </p>
+  </div>
+  <div class="d-flex gap-2">
+    <input type="text" id="searchInput" class="pg-input" placeholder="Search by name, ID, company..." style="width:280px;padding:8px 14px;font-size:13px;" onkeyup="filterWorkers()">
+  </div>
+</div>
+
+<div class="content-card">
+  <div class="table-responsive">
+    <table class="pg-table">
+      <thead>
+        <tr>
+          <th>Worker ID</th>
+          <th>Full Name &amp; Contact</th>
+          <th>Deployed Company &amp; Site</th>
+          <th>Role &amp; Shift</th>
+          <th>Joining Date</th>
+          <th>Status</th>
+          <th style="text-align:right;">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="workersBody">
+        <tr><td colspan="7" style="text-align:center;padding:3rem;color:var(--ink-60);">Loading workforce data...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ── WORKER ATTENDANCE HISTORY MODAL ────────────────────────────────────── -->
+<div id="workerAttendanceModal" style="display:none;position:fixed;inset:0;background:rgba(45,59,66,0.6);backdrop-filter:blur(4px);z-index:9999;align-items:center;justify-content:center;padding:1.5rem;">
+  <div style="background:#fff;border-radius:var(--radius-lg);padding:2.25rem;max-width:860px;width:100%;max-height:90vh;display:flex;flex-direction:column;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.25rem;">
+      <div>
+        <h4 style="margin:0;font-family:var(--font-serif);font-size:1.6rem;">
+          <i class="bi bi-clipboard2-check text-coral me-2"></i> Worker Attendance History
+        </h4>
+        <p id="workerAttendanceMeta" style="margin:4px 0 0;font-size:13px;color:var(--ink-60);">Loading attendance data...</p>
+      </div>
+      <button onclick="document.getElementById('workerAttendanceModal').style.display='none'" style="background:none;border:none;font-size:1.5rem;cursor:pointer;">&times;</button>
+    </div>
+
+    <!-- Stats Summary Row -->
+    <div class="row g-2 mb-3" id="workerAttStatsRow">
+      <div class="col-3">
+        <div style="background:var(--ink-02);border:1px solid var(--ink-05);border-radius:var(--radius-sm);padding:8px 12px;text-align:center;">
+          <div style="font-size:11px;font-weight:700;color:var(--ink-60);text-transform:uppercase;">Total Days</div>
+          <div id="attStatTotal" style="font-size:18px;font-weight:700;color:var(--ink);">0</div>
+        </div>
+      </div>
+      <div class="col-3">
+        <div style="background:#EBF8F2;border:1px solid rgba(22,163,74,0.2);border-radius:var(--radius-sm);padding:8px 12px;text-align:center;">
+          <div style="font-size:11px;font-weight:700;color:#16A34A;text-transform:uppercase;">Present</div>
+          <div id="attStatPresent" style="font-size:18px;font-weight:700;color:#16A34A;">0</div>
+        </div>
+      </div>
+      <div class="col-3">
+        <div style="background:#FDF1EE;border:1px solid rgba(220,38,38,0.2);border-radius:var(--radius-sm);padding:8px 12px;text-align:center;">
+          <div style="font-size:11px;font-weight:700;color:#DC2626;text-transform:uppercase;">Absent</div>
+          <div id="attStatAbsent" style="font-size:18px;font-weight:700;color:#DC2626;">0</div>
+        </div>
+      </div>
+      <div class="col-3">
+        <div style="background:#FEF3C7;border:1px solid rgba(217,119,6,0.2);border-radius:var(--radius-sm);padding:8px 12px;text-align:center;">
+          <div style="font-size:11px;font-weight:700;color:#D97706;text-transform:uppercase;">Half Day / Leave</div>
+          <div id="attStatHalf" style="font-size:18px;font-weight:700;color:#D97706;">0</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Attendance Table -->
+    <div style="overflow-y:auto;flex:1;border:1px solid var(--ink-05);border-radius:var(--radius-sm);">
+      <table class="pg-table" style="margin:0;">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Status</th>
+            <th>Check In</th>
+            <th>Check Out</th>
+            <th>GPS Verification</th>
+          </tr>
+        </thead>
+        <tbody id="workerAttendanceTableBody">
+          <tr><td colspan="5" style="text-align:center;padding:3rem;color:var(--ink-60);">Loading attendance logs...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="d-flex justify-content-end mt-3">
+      <button onclick="document.getElementById('workerAttendanceModal').style.display='none'" class="btn-secondary" style="padding:6px 18px;">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── PAYROLL MODAL ───────────────────────────────────────────────────────── -->
+<div id="payrollModal" style="display:none;position:fixed;inset:0;background:rgba(45,59,66,0.6);backdrop-filter:blur(4px);z-index:9999;align-items:center;justify-content:center;padding:1rem;">
+  <div style="background:#fff;border-radius:var(--radius-lg);padding:2.5rem;max-width:480px;width:100%;">
+    <div style="display:flex;justify-content:space-between;margin-bottom:1.5rem;">
+      <h4 style="margin:0;font-family:var(--font-serif);">Process Payroll</h4>
+      <button onclick="document.getElementById('payrollModal').style.display='none'" style="background:none;border:none;font-size:1.5rem;cursor:pointer;">&times;</button>
+    </div>
+    <form id="payrollForm">
+      <input type="hidden" name="worker_id" id="payrollWorkerId">
+      <div class="row g-3">
+        <div class="col-6">
+          <label class="pg-form-label">Month *</label>
+          <select name="month" class="pg-input" required>
+            <option>January</option><option>February</option><option>March</option>
+            <option>April</option><option>May</option><option>June</option>
+            <option>July</option><option selected>August</option><option>September</option>
+            <option>October</option><option>November</option><option>December</option>
+          </select>
+        </div>
+        <div class="col-6">
+          <label class="pg-form-label">Year *</label>
+          <input type="number" name="year" class="pg-input" value="2026" required>
+        </div>
+        <div class="col-6">
+          <label class="pg-form-label">Basic Salary (₹) *</label>
+          <input type="number" name="basic_salary" class="pg-input" placeholder="e.g. 15000" required>
+        </div>
+        <div class="col-6">
+          <label class="pg-form-label">Deductions (₹)</label>
+          <input type="number" name="deductions" class="pg-input" value="0" placeholder="e.g. 500">
+        </div>
+      </div>
+      <button type="submit" class="btn-primary w-100 mt-4" style="width:100%;justify-content:center;">Save Payroll Record</button>
+    </form>
+  </div>
+</div>
+
+<!-- ── WORKER TERMINATION MODAL ────────────────────────────────────────────── -->
+<div id="workerTerminateModal" style="display:none;position:fixed;inset:0;background:rgba(45,59,66,0.6);backdrop-filter:blur(4px);z-index:9999;align-items:center;justify-content:center;padding:1rem;">
+  <div style="background:#fff;border-radius:var(--radius-lg);padding:2.5rem;max-width:520px;width:100%;">
+    <div style="display:flex;justify-content:space-between;margin-bottom:1.25rem;">
+      <div>
+        <h4 style="margin:0;font-family:var(--font-serif);font-size:1.6rem;color:#DC2626;">Terminate Employee</h4>
+        <p style="margin:4px 0 0;color:var(--ink-60);font-size:13px;">Revokes deployment, restores candidate status so they can apply elsewhere, and sends PDF termination letter.</p>
+      </div>
+      <button onclick="document.getElementById('workerTerminateModal').style.display='none'" style="background:none;border:none;font-size:1.5rem;cursor:pointer;">&times;</button>
+    </div>
+
+    <form id="workerTerminateForm">
+      <input type="hidden" name="worker_id" id="terminateWorkerId">
+      
+      <div class="mb-3" id="terminateWorkerInfo" style="background:var(--ink-02);padding:10px 12px;border-radius:var(--radius-sm);font-size:13px;"></div>
+
+      <div class="mb-3">
+        <label class="pg-form-label">Reason for Termination *</label>
+        <textarea name="reason" id="workerTerminateReason" class="pg-input" rows="4" required placeholder="e.g. Unauthorized absence / Project completion / Non-performance / Safety violation at client plant."></textarea>
+      </div>
+
+      <div class="mb-3">
+        <label class="pg-form-label">Effective Date</label>
+        <input type="date" name="effective_date" id="workerTerminateDate" class="pg-input">
+      </div>
+
+      <div class="pg-alert pg-alert-error" style="font-size:12px;">
+        <i class="bi bi-exclamation-triangle-fill me-1"></i> The worker deployment will be closed and an official Separation Notice PDF with letterhead dispatched to their email. Their candidate account will remain active so they can apply for other roles.
+      </div>
+
+      <div class="d-flex gap-2 mt-3">
+        <button type="button" onclick="document.getElementById('workerTerminateModal').style.display='none'" class="btn-secondary" style="flex:1;justify-content:center;">Cancel</button>
+        <button type="submit" id="btnConfirmWorkerTerminate" class="btn-primary" style="flex:1;justify-content:center;background:#DC2626;box-shadow:none;">
+          <i class="bi bi-x-circle"></i> Terminate Employee
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let allWorkers = [];
+
+async function loadWorkers() {
+  const data = await apiGet('/api/v1/admin/workers');
+  if (!data) return;
+  allWorkers = data;
+  renderWorkers(data);
+}
+
+function renderWorkers(workers) {
+  const tbody = document.getElementById('workersBody');
+  if (!workers.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:3rem;color:var(--ink-60);">No workers deployed yet.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = workers.map(w => {
+    let statusPill = '';
+    let actionButtons = '';
+
+    if (w.is_active) {
+      statusPill = `<span class="status-pill status-selected"><i class="bi bi-check-circle-fill me-1"></i> Active</span>`;
+      actionButtons = `
+        <button onclick="openWorkerAttendance(${w.id})" class="btn-secondary" style="padding:6px 12px;font-size:12px;" title="View Worker Attendance History">
+          <i class="bi bi-clipboard2-check text-coral me-1"></i> Attendance
+        </button>
+        <button onclick="openPayroll(${w.id})" class="btn-secondary" style="padding:6px 12px;font-size:12px;" title="Process Payroll">
+          <i class="bi bi-cash-coin text-coral me-1"></i> Payroll
+        </button>
+        <button onclick="openWorkerTerminateModal(${w.id}, '${escapeHtml(w.full_name)}', '${escapeHtml(w.worker_id_str || '')}', '${escapeHtml(w.company)}')" class="btn-secondary" style="padding:6px 12px;font-size:12px;color:#DC2626;border-color:#DC2626;" title="Terminate Worker">
+          <i class="bi bi-person-x"></i> Terminate
+        </button>
+      `;
+    } else {
+      statusPill = `<span class="status-pill status-rejected"><i class="bi bi-x-circle-fill me-1"></i> Terminated</span>`;
+      actionButtons = `
+        <button onclick="openWorkerAttendance(${w.id})" class="btn-secondary" style="padding:6px 12px;font-size:12px;" title="View Past Attendance History">
+          <i class="bi bi-clipboard2-check text-coral me-1"></i> Attendance
+        </button>
+        <button onclick="downloadWorkerTerminationPdf(${w.id})" class="btn-secondary" style="padding:6px 12px;font-size:12px;color:#DC2626;border-color:#DC2626;" title="Download Termination Letter">
+          <i class="bi bi-file-earmark-pdf-fill text-coral me-1"></i> Letter (PDF)
+        </button>
+        <button onclick="restoreAsCandidate(${w.id}, '${escapeHtml(w.full_name)}')" class="btn-secondary" style="padding:6px 12px;font-size:12px;color:#16A34A;border-color:#16A34A;" title="Restore Account as Candidate">
+          <i class="bi bi-person-check me-1"></i> Restore as Candidate
+        </button>
+      `;
+    }
+
+    return `
+      <tr>
+        <td><strong class="badge-ink">${escapeHtml(w.worker_id_str || 'PGW-' + w.id)}</strong></td>
+        <td>
+          <div style="font-weight:700;color:var(--ink);">${escapeHtml(w.full_name)}</div>
+          <div style="font-size:12px;color:var(--ink-60);"><i class="bi bi-telephone me-1"></i>${escapeHtml(w.phone)}</div>
+        </td>
+        <td>
+          <div style="font-weight:600;">${escapeHtml(w.company)}</div>
+          <div style="font-size:12px;color:var(--ink-60);"><i class="bi bi-geo-alt me-1"></i>${escapeHtml(w.area || 'Factory Site')}</div>
+        </td>
+        <td>
+          <div>${escapeHtml(w.job_role)}</div>
+          <span class="badge-peach">${escapeHtml(w.shift)}</span>
+        </td>
+        <td style="color:var(--ink-60);font-size:13px;">${escapeHtml(w.joining_date || '—')}</td>
+        <td>
+          ${statusPill}
+          ${w.termination_reason ? `<div style="font-size:11px;color:#DC2626;margin-top:4px;">${escapeHtml(w.termination_reason)}</div>` : ''}
+        </td>
+        <td style="text-align:right;">
+          <div class="d-flex justify-content-end gap-2">
+            ${actionButtons}
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return str.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+function filterWorkers() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  renderWorkers(allWorkers.filter(w =>
+    (w.full_name || '').toLowerCase().includes(q) ||
+    (w.worker_id_str || '').toLowerCase().includes(q) ||
+    (w.company || '').toLowerCase().includes(q) ||
+    (w.job_role || '').toLowerCase().includes(q)
+  ));
+}
+
+async function openWorkerAttendance(workerId) {
+  const modal = document.getElementById('workerAttendanceModal');
+  modal.style.display = 'flex';
+  document.getElementById('workerAttendanceMeta').innerHTML = 'Loading worker attendance data...';
+  document.getElementById('workerAttendanceTableBody').innerHTML = '<tr><td colspan="5" style="text-align:center;padding:3rem;color:var(--ink-60);">Fetching attendance records...</td></tr>';
+
+  const res = await apiGet(`/api/v1/admin/workers/${workerId}/attendance`);
+  if (!res) return;
+
+  const w = res.worker;
+  document.getElementById('workerAttendanceMeta').innerHTML = `
+    Worker: <strong>${escapeHtml(w.full_name)}</strong> &nbsp;|&nbsp; 
+    ID: <code>${escapeHtml(w.worker_id_str)}</code> &nbsp;|&nbsp; 
+    Company: <strong>${escapeHtml(w.company)}</strong> &nbsp;|&nbsp; 
+    Role: <em>${escapeHtml(w.job_role)}</em>
+  `;
+
+  // Update stat counters
+  document.getElementById('attStatTotal').textContent = res.total_days;
+  document.getElementById('attStatPresent').textContent = res.summary.PRESENT || 0;
+  document.getElementById('attStatAbsent').textContent = res.summary.ABSENT || 0;
+  document.getElementById('attStatHalf').textContent = (res.summary.HALF_DAY || 0) + (res.summary.LEAVE || 0);
+
+  const tbody = document.getElementById('workerAttendanceTableBody');
+  if (!res.records.length) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:3rem;color:var(--ink-60);">No attendance records found for this worker.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = res.records.map(r => {
+    const statusClass = {
+      'PRESENT': 'background:#EBF8F2; color:#16A34A;',
+      'ABSENT': 'background:#FDF1EE; color:#DC2626;',
+      'HALF_DAY': 'background:#FEF3C7; color:#D97706;',
+      'LEAVE': 'background:#F3F4F6; color:#6B7280;'
+    }[r.status] || '';
+
+    const hasGPS = r.latitude && r.longitude;
+    const gpsDisplay = hasGPS ? `
+      <a href="https://www.google.com/maps?q=${r.latitude},${r.longitude}" target="_blank" style="color:var(--coral);font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:4px;font-size:12px;">
+        <i class="bi bi-geo-alt-fill"></i> ${parseFloat(r.latitude).toFixed(4)}, ${parseFloat(r.longitude).toFixed(4)}
+      </a>
+      ${r.location_address ? `<div style="font-size:11px;color:var(--ink-60);">${escapeHtml(r.location_address)}</div>` : ''}
+    ` : '<span style="color:var(--ink-40);font-size:12px;">No GPS recorded</span>';
+
+    return `
+      <tr>
+        <td style="font-weight:600;">${r.date}</td>
+        <td><span class="status-pill" style="${statusClass}">${r.status}</span></td>
+        <td style="font-size:13px;color:var(--ink);">${r.check_in ? r.check_in.substring(0,5) : '—'}</td>
+        <td style="font-size:13px;color:var(--ink);">${r.check_out ? r.check_out.substring(0,5) : '—'}</td>
+        <td>${gpsDisplay}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function openPayroll(workerId) {
+  document.getElementById('payrollWorkerId').value = workerId;
+  document.getElementById('payrollModal').style.display = 'flex';
+}
+
+function openWorkerTerminateModal(workerId, name, widStr, company) {
+  document.getElementById('terminateWorkerId').value = workerId;
+  document.getElementById('terminateWorkerInfo').innerHTML = `
+    <strong>${name}</strong> &nbsp;|&nbsp; ID: <code>${widStr}</code> &nbsp;|&nbsp; Company: <em>${company}</em>
+  `;
+  document.getElementById('workerTerminateDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('workerTerminateModal').style.display = 'flex';
+}
+
+async function restoreAsCandidate(workerId, name) {
+  if (!confirm(`Restore ${name} as an active Candidate? They will be able to log in and apply for other jobs.`)) return;
+  const res = await apiPost(`/api/v1/admin/workers/${workerId}/restore-as-candidate`);
+  if (res) {
+    alert('✅ ' + res.message);
+    loadWorkers();
+  }
+}
+
+document.getElementById('payrollForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const wid = fd.get('worker_id');
+  fd.delete('worker_id');
+  const res = await apiPost(`/api/v1/admin/workers/${wid}/payroll`, fd);
+  if (res) {
+    document.getElementById('payrollModal').style.display = 'none';
+    alert(`✅ Payroll added! Net salary: ₹${res.net_salary}`);
+  }
+});
+
+document.getElementById('workerTerminateForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById('btnConfirmWorkerTerminate');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Processing termination &amp; PDF...';
+
+  const fd = new FormData(e.target);
+  const wid = fd.get('worker_id');
+  fd.delete('worker_id');
+
+  const res = await apiPost(`/api/v1/admin/workers/${wid}/terminate`, fd);
+  btn.disabled = false;
+  btn.innerHTML = '<i class="bi bi-x-circle"></i> Terminate Employee';
+
+  if (res) {
+    document.getElementById('workerTerminateModal').style.display = 'none';
+    alert('✅ ' + res.message);
+    loadWorkers();
+  }
+});
+
+function downloadWorkerTerminationPdf(workerId) {
+  const token = localStorage.getItem('token');
+  window.open(`/api/v1/admin/workers/${workerId}/termination-letter/pdf?token=${token || ''}`, '_blank');
+}
+
+loadWorkers();
+</script>
+{% endblock %}

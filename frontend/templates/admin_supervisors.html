@@ -1,0 +1,523 @@
+{% extends "dashboard_base.html" %}
+{% block title %}Supervisors Management – Admin{% endblock %}
+
+{% block sidebar %}
+  <div class="sidebar-label">Main</div>
+  <a href="/dashboard/admin" class="sidebar-link"><i class="bi bi-speedometer2"></i> Overview</a>
+  <a href="/dashboard/admin/analytics" class="sidebar-link"><i class="bi bi-bar-chart-fill"></i> Analytics</a>
+  <div class="sidebar-label">Recruitment</div>
+  <a href="/dashboard/admin/jobs" class="sidebar-link"><i class="bi bi-briefcase"></i> Jobs &amp; Applications</a>
+  <a href="/dashboard/admin/candidates" class="sidebar-link"><i class="bi bi-people"></i> Candidates</a>
+  <a href="/dashboard/admin/workers" class="sidebar-link"><i class="bi bi-person-badge"></i> Workers</a>
+  <div class="sidebar-label">Management</div>
+  <a href="/dashboard/admin/supervisors" class="sidebar-link active"><i class="bi bi-person-gear"></i> Supervisors</a>
+{% endblock %}
+
+{% block content %}
+<div class="dash-header">
+  <div>
+    <h1 class="dash-title">Field Supervisors</h1>
+    <p style="margin: 4px 0 0; color: var(--ink-60); font-size: 13px;">
+      Manage supervisor approvals, assign deployment companies and industrial locations for attendance, track live GPS locations, or inspect recorded attendance logs.
+    </p>
+  </div>
+  <div class="d-flex align-items-center gap-2">
+    <a href="/dashboard/admin/supervisors/tracker" class="btn-primary" style="padding:10px 18px;font-size:13px;background:linear-gradient(135deg,#2D3B42,#1a2327);">
+      <i class="bi bi-geo-alt-fill text-coral me-1"></i> Live GPS Tracker Map
+    </a>
+  </div>
+</div>
+
+<div class="row g-3" id="supervisorsList">
+  <div class="col-12 text-center py-5" style="color:var(--ink-60);">Loading supervisors...</div>
+</div>
+
+<!-- ── APPROVE & ASSIGN MODAL ──────────────────────────────────────────────── -->
+<div id="approveModal" style="display:none;position:fixed;inset:0;background:rgba(45,59,66,0.6);backdrop-filter:blur(4px);z-index:9999;align-items:center;justify-content:center;padding:1rem;">
+  <div style="background:#fff;border-radius:var(--radius-lg);padding:2.25rem;max-width:540px;width:100%;max-height:90vh;overflow-y:auto;">
+    <div style="display:flex;justify-content:space-between;margin-bottom:1.25rem;">
+      <div>
+        <h4 style="margin:0;font-family:var(--font-serif);font-size:1.5rem;">Approve &amp; Assign Supervisor</h4>
+        <p style="margin:4px 0 0;font-size:12px;color:var(--ink-60);">Supervisor uses their own registered credentials. Just assign their deployment city &amp; companies.</p>
+      </div>
+      <button onclick="document.getElementById('approveModal').style.display='none'" style="background:none;border:none;font-size:1.5rem;cursor:pointer;">&times;</button>
+    </div>
+
+    <!-- Supervisor info banner -->
+    <div id="approveSupInfo" style="background:var(--ink-02);border:1px solid var(--ink-10);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:1.25rem;font-size:13px;display:flex;align-items:center;gap:10px;">
+      <i class="bi bi-person-circle" style="font-size:1.5rem;color:var(--coral);"></i>
+      <div>
+        <div id="approveSupName" style="font-weight:700;">—</div>
+        <div id="approveSupEmail" style="font-size:12px;color:var(--ink-60);">—</div>
+      </div>
+    </div>
+
+    <form id="approveForm">
+      <input type="hidden" name="sup_id" id="approveSupId">
+
+      <div class="mb-3">
+        <label class="pg-form-label">Assigned City / Location</label>
+        <input type="text" name="assigned_location" id="approveLocation" class="pg-input" placeholder="e.g. Pune, Chakan MIDC">
+        <small style="color:var(--ink-60);font-size:11px;">City or site name where this supervisor will operate</small>
+      </div>
+
+      <div class="mb-3">
+        <label class="pg-form-label" style="margin-bottom:8px;display:block;">
+          <i class="bi bi-buildings me-1 text-coral"></i> Assigned Companies
+          <small style="color:var(--ink-60);font-weight:400;"> — select all that apply</small>
+        </label>
+        <div id="approveCompanyCheckboxes" style="background:var(--ink-02);border:1px solid var(--ink-10);border-radius:var(--radius-sm);padding:12px;max-height:200px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;">
+          <span style="color:var(--ink-40);font-size:13px;">Loading companies...</span>
+        </div>
+        <input type="hidden" name="assigned_company" id="approveCompanyValue">
+        <small style="color:var(--ink-60);font-size:11px;">Leave all unchecked to assign to all companies</small>
+      </div>
+
+      <div class="pg-alert pg-alert-info mt-3" style="font-size:12px;">
+        <i class="bi bi-info-circle-fill me-1"></i> The supervisor will log in using the <strong>email &amp; password they set during registration</strong>. No credential reset needed.
+      </div>
+
+      <button type="submit" id="approveSubmitBtn" class="btn-primary w-100 mt-3" style="width:100%;justify-content:center;">
+        <i class="bi bi-check2-circle"></i> Approve &amp; Activate Supervisor
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- ── RE-ASSIGN SCOPE MODAL ───────────────────────────────────────────────── -->
+<div id="assignScopeModal" style="display:none;position:fixed;inset:0;background:rgba(45,59,66,0.6);backdrop-filter:blur(4px);z-index:9999;align-items:center;justify-content:center;padding:1rem;">
+  <div style="background:#fff;border-radius:var(--radius-lg);padding:2.25rem;max-width:500px;width:100%;max-height:90vh;overflow-y:auto;">
+    <div style="display:flex;justify-content:space-between;margin-bottom:1.25rem;">
+      <div>
+        <h4 style="margin:0;font-family:var(--font-serif);font-size:1.5rem;">Update Assigned Scope</h4>
+        <p style="margin:4px 0 0;font-size:12px;color:var(--ink-60);">Change the city and companies this supervisor covers.</p>
+      </div>
+      <button onclick="document.getElementById('assignScopeModal').style.display='none'" style="background:none;border:none;font-size:1.5rem;cursor:pointer;">&times;</button>
+    </div>
+
+    <form id="assignScopeForm">
+      <input type="hidden" name="sup_id" id="assignSupId">
+
+      <div class="mb-3">
+        <label class="pg-form-label">Assigned City / Location</label>
+        <input type="text" name="assigned_location" id="assignLocationInput" class="pg-input" placeholder="e.g. Pune, Chakan MIDC">
+      </div>
+
+      <div class="mb-3">
+        <label class="pg-form-label" style="margin-bottom:8px;display:block;">
+          <i class="bi bi-buildings me-1 text-coral"></i> Assigned Companies
+          <small style="color:var(--ink-60);font-weight:400;"> — select all that apply</small>
+        </label>
+        <div id="assignCompanyCheckboxes" style="background:var(--ink-02);border:1px solid var(--ink-10);border-radius:var(--radius-sm);padding:12px;max-height:200px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;">
+          <span style="color:var(--ink-40);font-size:13px;">Loading companies...</span>
+        </div>
+        <input type="hidden" name="assigned_company" id="assignCompanyValue">
+        <small style="color:var(--ink-60);font-size:11px;">Leave all unchecked to cover all companies</small>
+      </div>
+
+      <button type="submit" class="btn-primary w-100" style="width:100%;justify-content:center;">
+        <i class="bi bi-geo-fill"></i> Save Assigned Scope
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- ── SUPERVISOR ATTENDANCE LOG MODAL ─────────────────────────────────────── -->
+<div id="supAttendanceModal" style="display:none;position:fixed;inset:0;background:rgba(45,59,66,0.6);backdrop-filter:blur(4px);z-index:9999;align-items:center;justify-content:center;padding:1.5rem;">
+  <div style="background:#fff;border-radius:var(--radius-lg);padding:2.25rem;max-width:860px;width:100%;max-height:90vh;display:flex;flex-direction:column;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.25rem;">
+      <div>
+        <h4 style="margin:0;font-family:var(--font-serif);font-size:1.6rem;">
+          <i class="bi bi-clipboard-check text-coral me-2"></i> Attendance Log Taken by Supervisor
+        </h4>
+        <p id="supAttendanceInfo" style="margin:4px 0 0;font-size:13px;color:var(--ink-60);">Loading supervisor attendance records...</p>
+      </div>
+      <button onclick="document.getElementById('supAttendanceModal').style.display='none'" style="background:none;border:none;font-size:1.5rem;cursor:pointer;">&times;</button>
+    </div>
+
+    <div style="overflow-y:auto;flex:1;border:1px solid var(--ink-05);border-radius:var(--radius-sm);">
+      <table class="pg-table" style="margin:0;">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Worker ID &amp; Name</th>
+            <th>Client Company</th>
+            <th>Status</th>
+            <th>Check In / Out</th>
+            <th>GPS Location</th>
+          </tr>
+        </thead>
+        <tbody id="supAttendanceTableBody">
+          <tr><td colspan="6" style="text-align:center;padding:3rem;color:var(--ink-60);">Loading attendance records...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center mt-3">
+      <span id="supAttendanceCount" style="font-size:13px;color:var(--ink-60);">0 Total Records</span>
+      <button onclick="document.getElementById('supAttendanceModal').style.display='none'" class="btn-secondary" style="padding:6px 16px;">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── TERMINATION MODAL ───────────────────────────────────────────────────── -->
+<div id="terminateModal" style="display:none;position:fixed;inset:0;background:rgba(45,59,66,0.6);backdrop-filter:blur(4px);z-index:9999;align-items:center;justify-content:center;padding:1rem;">
+  <div style="background:#fff;border-radius:var(--radius-lg);padding:2.5rem;max-width:480px;width:100%;">
+    <div style="display:flex;justify-content:space-between;margin-bottom:1.5rem;">
+      <div>
+        <h4 style="margin:0;font-family:var(--font-serif);font-size:1.6rem;color:#DC2626;">Terminate Supervisor</h4>
+        <p style="margin:4px 0 0;color:var(--ink-60);font-size:13px;">Revoke access, generate formal termination PDF, and email notice.</p>
+      </div>
+      <button onclick="document.getElementById('terminateModal').style.display='none'" style="background:none;border:none;font-size:1.5rem;cursor:pointer;">&times;</button>
+    </div>
+
+    <form id="terminateSupForm">
+      <input type="hidden" name="sup_id" id="terminateSupId">
+      
+      <div class="mb-3">
+        <label class="pg-form-label">Reason for Termination *</label>
+        <textarea name="reason" id="terminateReasonInput" class="pg-input" rows="4" required placeholder="e.g. Contract expired / Non-compliance with site attendance protocols / Disciplinary action."></textarea>
+      </div>
+
+      <div class="mb-3">
+        <label class="pg-form-label">Effective Date</label>
+        <input type="date" name="effective_date" id="terminateDateInput" class="pg-input">
+      </div>
+
+      <div class="pg-alert pg-alert-error" style="font-size:12px;">
+        <i class="bi bi-exclamation-octagon-fill me-1"></i> This supervisor's account will be deactivated immediately and an official Termination Letter PDF will be generated and dispatched.
+      </div>
+
+      <div class="d-flex gap-2 mt-3">
+        <button type="button" onclick="document.getElementById('terminateModal').style.display='none'" class="btn-secondary" style="flex:1;justify-content:center;">Cancel</button>
+        <button type="submit" id="terminateSubmitBtn" class="btn-primary" style="flex:1;justify-content:center;background:#DC2626;box-shadow:none;">
+          <i class="bi bi-x-circle"></i> Confirm Termination
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let supervisorList = [];
+
+async function loadSupervisors() {
+  const sups = await apiGet('/api/v1/admin/supervisors');
+  if (!sups) return;
+  supervisorList = sups;
+  const el = document.getElementById('supervisorsList');
+
+  if (!sups.length) {
+    el.innerHTML = '<div class="col-12 text-center py-5" style="color:var(--ink-60);">No supervisors registered yet.</div>';
+    return;
+  }
+
+  el.innerHTML = sups.map(s => {
+    let statusPill = '';
+    let actionButtons = '';
+
+    if (s.is_approved && s.is_active) {
+      statusPill = `<span class="status-pill status-selected"><i class="bi bi-check-circle-fill me-1"></i> Active Supervisor</span>`;
+      actionButtons = `
+        <button onclick="openAttendanceLog(${s.id}, '${escapeHtml(s.name)}')" class="btn-secondary" style="padding:8px 12px;font-size:12px;" title="View Attendance Log taken by this Supervisor">
+          <i class="bi bi-clipboard2-check text-coral me-1"></i> Attendance
+        </button>
+        <button onclick="openAssignScope(${s.id}, '${escapeHtml(s.assigned_company || '')}', '${escapeHtml(s.assigned_location || '')}')" class="btn-secondary" style="flex:1;justify-content:center;padding:8px;font-size:12px;">
+          <i class="bi bi-geo-alt"></i> Assign
+        </button>
+        <button onclick="openTerminateModal(${s.id})" class="btn-secondary" style="padding:8px 12px;font-size:12px;border-color:#DC2626;color:#DC2626;" title="Terminate Supervisor">
+          <i class="bi bi-person-x"></i>
+        </button>
+      `;
+    } else if (!s.is_approved && !s.termination_reason) {
+      // New supervisor registered -> waiting for admin approval
+      statusPill = `<span class="status-pill status-pending"><i class="bi bi-hourglass-split me-1"></i> Pending Approval</span>`;
+      actionButtons = `
+        <button onclick="openApprove(${s.id}, '${escapeHtml(s.name)}', '${escapeHtml(s.email)}', '${escapeHtml(s.area)}')" class="btn-primary" style="flex:1;justify-content:center;padding:8px;font-size:12px;">
+          <i class="bi bi-check-circle"></i> Approve &amp; Assign
+        </button>
+        <button onclick="rejectSup(${s.id})" class="btn-secondary" style="padding:8px 12px;font-size:12px;border-color:#dc2626;color:#dc2626;" title="Reject Application">
+          <i class="bi bi-x-circle"></i> Reject
+        </button>
+      `;
+    } else {
+      // Terminated or rejected
+      const isRejected = (s.termination_reason === 'Application Rejected');
+      statusPill = `<span class="status-pill status-rejected"><i class="bi bi-x-circle-fill me-1"></i> ${isRejected ? 'Application Rejected' : 'Terminated / Revoked'}</span>`;
+      actionButtons = `
+        ${!isRejected ? `
+          <button onclick="downloadSupervisorTerminationPdf(${s.id})" class="btn-secondary" style="flex:1;justify-content:center;padding:8px;font-size:12px;color:#DC2626;border-color:#DC2626;">
+            <i class="bi bi-file-earmark-pdf-fill text-coral me-1"></i> Letter (PDF)
+          </button>
+        ` : ''}
+        <button onclick="openApprove(${s.id}, '${escapeHtml(s.name)}', '${escapeHtml(s.email)}', '${escapeHtml(s.area)}')" class="btn-secondary" style="flex:1;justify-content:center;padding:8px;font-size:12px;color:#16A34A;border-color:#16A34A;" title="Approve / Re-activate Supervisor">
+          <i class="bi bi-check2-circle me-1"></i> Re-Approve
+        </button>
+      `;
+    }
+
+    return `
+      <div class="col-lg-4 col-md-6">
+        <div class="content-card h-100 d-flex flex-column justify-content-between">
+          <div class="content-card-body">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1rem;">
+              <div>
+                <h5 style="margin:0 0 4px;font-weight:700;">${escapeHtml(s.name)}</h5>
+                <p style="font-size:13px;color:var(--ink-60);margin:0;">${escapeHtml(s.email)}</p>
+              </div>
+              ${statusPill}
+            </div>
+
+            <!-- Assigned Company & Location -->
+            <div style="background:var(--ink-02);border:1px solid var(--ink-05);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:1rem;font-size:13px;">
+              <div style="margin-bottom:4px;">
+                <span style="color:var(--ink-60);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;">Assigned Company:</span>
+                <strong style="color:var(--ink);display:block;">${escapeHtml(s.assigned_company || 'All Companies')}</strong>
+              </div>
+              <div>
+                <span style="color:var(--ink-60);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;">Assigned Site / Area:</span>
+                <span style="color:var(--coral);font-weight:600;display:block;"><i class="bi bi-geo-alt-fill me-1"></i>${escapeHtml(s.assigned_location || s.area + ', ' + s.city)}</span>
+              </div>
+            </div>
+
+            <div style="font-size:13px;color:var(--ink-60);display:flex;flex-direction:column;gap:6px;margin-bottom:1rem;">
+              <span><i class="bi bi-telephone me-1"></i> ${escapeHtml(s.phone)}</span>
+              <span><i class="bi bi-buildings me-1"></i> Registered City: ${escapeHtml(s.city)}</span>
+              ${s.last_seen_at ? `<span style="color:#16A34A;font-size:12px;"><i class="bi bi-geo-fill me-1"></i> GPS Live Active (${s.last_seen_at.split('T')[0]})</span>` : ''}
+              ${s.termination_reason ? `<span style="color:#DC2626;font-size:12px;"><i class="bi bi-info-circle me-1"></i> Reason: ${escapeHtml(s.termination_reason)}</span>` : ''}
+            </div>
+          </div>
+
+          <div class="content-card-footer" style="padding:1rem;border-top:1px solid var(--ink-05);background:transparent;">
+            <div style="display:flex;gap:8px;">
+              ${actionButtons}
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return str.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+let cachedCompanies = [];
+
+async function loadCompanies() {
+  if (cachedCompanies.length > 0) return cachedCompanies;
+  const res = await apiGet('/api/v1/admin/companies');
+  cachedCompanies = res ? res.companies : [];
+  return cachedCompanies;
+}
+
+function renderCompanyCheckboxes(containerId, selectedCompanies) {
+  // selectedCompanies is an array of already-selected company names
+  const container = document.getElementById(containerId);
+  if (!cachedCompanies.length) {
+    container.innerHTML = '<span style="color:var(--ink-40);font-size:13px;">No companies found. Add jobs first.</span>';
+    return;
+  }
+  container.innerHTML = cachedCompanies.map(c => {
+    const checked = selectedCompanies.includes(c) ? 'checked' : '';
+    const safeId = 'chk_' + containerId + '_' + c.replace(/[^a-zA-Z0-9]/g,'_');
+    return `
+      <label for="${safeId}" style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:6px 8px;border-radius:6px;transition:background 0.15s;" onmouseover="this.style.background='#f5f5f5'" onmouseout="this.style.background='transparent'">
+        <input type="checkbox" id="${safeId}" value="${escapeHtml(c)}" ${checked}
+          onchange="syncCompanyCheckboxes('${containerId}', '${containerId === 'approveCompanyCheckboxes' ? 'approveCompanyValue' : 'assignCompanyValue'}')"
+          style="width:16px;height:16px;accent-color:var(--coral);flex-shrink:0;">
+        <span style="font-size:13px;font-weight:500;">${escapeHtml(c)}</span>
+      </label>
+    `;
+  }).join('');
+}
+
+function syncCompanyCheckboxes(containerId, hiddenId) {
+  const container = document.getElementById(containerId);
+  const checked = [...container.querySelectorAll('input[type=checkbox]:checked')].map(el => el.value);
+  document.getElementById(hiddenId).value = checked.join(', ');
+}
+
+function openApprove(supId, name, email, area) {
+  document.getElementById('approveSupId').value = supId;
+  document.getElementById('approveSupName').textContent = name;
+  document.getElementById('approveSupEmail').textContent = email;
+  document.getElementById('approveLocation').value = area || '';
+  document.getElementById('approveCompanyValue').value = '';
+  document.getElementById('approveModal').style.display = 'flex';
+  // Load and render company checkboxes
+  loadCompanies().then(() => renderCompanyCheckboxes('approveCompanyCheckboxes', []));
+}
+
+function openAssignScope(supId, company, location) {
+  document.getElementById('assignSupId').value = supId;
+  document.getElementById('assignLocationInput').value = (location === 'All Locations' || !location) ? '' : location;
+  document.getElementById('assignCompanyValue').value = '';
+  document.getElementById('assignScopeModal').style.display = 'flex';
+  // Pre-check current companies
+  const currentCompanies = (company && company !== 'All Companies')
+    ? company.split(',').map(s => s.trim()).filter(Boolean)
+    : [];
+  loadCompanies().then(() => {
+    renderCompanyCheckboxes('assignCompanyCheckboxes', currentCompanies);
+    // Initialize hidden value
+    document.getElementById('assignCompanyValue').value = currentCompanies.join(', ');
+  });
+}
+
+function openTerminateModal(supId) {
+  document.getElementById('terminateSupId').value = supId;
+  document.getElementById('terminateDateInput').value = new Date().toISOString().split('T')[0];
+  document.getElementById('terminateModal').style.display = 'flex';
+}
+
+async function openAttendanceLog(supId, supName) {
+  const modal = document.getElementById('supAttendanceModal');
+  modal.style.display = 'flex';
+  document.getElementById('supAttendanceInfo').innerHTML = `Supervisor: <strong>${supName}</strong>`;
+  document.getElementById('supAttendanceTableBody').innerHTML = '<tr><td colspan="6" style="text-align:center;padding:3rem;color:var(--ink-60);">Fetching attendance records...</td></tr>';
+
+  const res = await apiGet(`/api/v1/admin/supervisors/${supId}/attendance`);
+  if (!res) return;
+
+  document.getElementById('supAttendanceInfo').innerHTML = `
+    Supervisor: <strong>${escapeHtml(res.supervisor.name)}</strong> &nbsp;|&nbsp; 
+    Company: <em>${escapeHtml(res.supervisor.assigned_company)}</em> &nbsp;|&nbsp; 
+    Site: <em>${escapeHtml(res.supervisor.assigned_location)}</em>
+  `;
+  document.getElementById('supAttendanceCount').textContent = `${res.total_records} Attendance Records`;
+
+  const tbody = document.getElementById('supAttendanceTableBody');
+  if (!res.records.length) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:3rem;color:var(--ink-60);">No attendance marked under this supervisor yet.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = res.records.map(r => {
+    const statusClass = {
+      'PRESENT': 'background:#EBF8F2; color:#16A34A;',
+      'ABSENT': 'background:#FDF1EE; color:#DC2626;',
+      'HALF_DAY': 'background:#FEF3C7; color:#D97706;',
+      'LEAVE': 'background:#F3F4F6; color:#6B7280;'
+    }[r.status] || '';
+
+    const hasGPS = r.latitude && r.longitude;
+    const gpsLink = hasGPS ? `
+      <a href="https://www.google.com/maps?q=${r.latitude},${r.longitude}" target="_blank" style="color:var(--coral);font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:4px;font-size:12px;">
+        <i class="bi bi-geo-alt-fill"></i> ${parseFloat(r.latitude).toFixed(3)}, ${parseFloat(r.longitude).toFixed(3)}
+      </a>
+    ` : '<span style="color:var(--ink-40);font-size:12px;">No GPS recorded</span>';
+
+    return `
+      <tr>
+        <td style="font-weight:600;">${r.date}</td>
+        <td>
+          <div style="font-weight:700;">${escapeHtml(r.full_name)}</div>
+          <span class="badge-ink" style="font-size:10px;">${escapeHtml(r.worker_id_str)}</span>
+        </td>
+        <td>
+          <div>${escapeHtml(r.company)}</div>
+          <div style="font-size:11px;color:var(--ink-60);">${escapeHtml(r.job_role)}</div>
+        </td>
+        <td><span class="status-pill" style="${statusClass}">${r.status}</span></td>
+        <td style="font-size:12px;color:var(--ink-60);">
+          ${r.check_in ? r.check_in.substring(0,5) : '—'} - ${r.check_out ? r.check_out.substring(0,5) : '—'}
+        </td>
+        <td>${gpsLink}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function autoDetectGPS(latInputId, lngInputId) {
+  if (!navigator.geolocation) { alert('Geolocation not supported by browser.'); return; }
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      document.getElementById(latInputId).value = pos.coords.latitude.toFixed(6);
+      document.getElementById(lngInputId).value = pos.coords.longitude.toFixed(6);
+      alert(`📍 GPS Coordinates Captured: ${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`);
+    },
+    err => { alert('Could not get GPS coordinates: ' + err.message); },
+    { enableHighAccuracy: true }
+  );
+}
+
+document.getElementById('approveForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById('approveSubmitBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Approving...';
+
+  const fd = new FormData(e.target);
+  const supId = fd.get('sup_id');
+  // Sync checkbox values before submit
+  syncCompanyCheckboxes('approveCompanyCheckboxes', 'approveCompanyValue');
+  fd.set('assigned_company', document.getElementById('approveCompanyValue').value);
+  fd.delete('sup_id');
+  const res = await apiPatch(`/api/v1/admin/supervisors/${supId}/approve`, fd);
+  btn.disabled = false;
+  btn.innerHTML = '<i class="bi bi-check2-circle"></i> Approve &amp; Activate Supervisor';
+
+  if (res) {
+    document.getElementById('approveModal').style.display = 'none';
+    alert('✅ ' + res.message);
+    loadSupervisors();
+  }
+});
+
+document.getElementById('assignScopeForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  // Sync checkbox values before submit
+  syncCompanyCheckboxes('assignCompanyCheckboxes', 'assignCompanyValue');
+  const fd = new FormData(e.target);
+  const supId = fd.get('sup_id');
+  fd.set('assigned_company', document.getElementById('assignCompanyValue').value);
+  fd.delete('sup_id');
+  const res = await apiPatch(`/api/v1/admin/supervisors/${supId}/assign`, fd);
+  if (res) {
+    document.getElementById('assignScopeModal').style.display = 'none';
+    alert('✅ ' + res.message);
+    loadSupervisors();
+  }
+});
+
+document.getElementById('terminateSupForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById('terminateSubmitBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Generating letter &amp; processing...';
+
+  const fd = new FormData(e.target);
+  const supId = fd.get('sup_id');
+  fd.delete('sup_id');
+  const res = await apiPost(`/api/v1/admin/supervisors/${supId}/terminate`, fd);
+  btn.disabled = false;
+  btn.innerHTML = '<i class="bi bi-x-circle"></i> Confirm Termination';
+
+  if (res) {
+    document.getElementById('terminateModal').style.display = 'none';
+    alert('✅ ' + res.message);
+    loadSupervisors();
+  }
+});
+
+async function rejectSup(supId) {
+  if (!confirm('Reject this supervisor registration?')) return;
+  const fd = new FormData();
+  const res = await apiPatch(`/api/v1/admin/supervisors/${supId}/reject`, fd);
+  if (res) loadSupervisors();
+}
+
+async function downloadSupervisorTerminationPdf(supId) {
+  const token = localStorage.getItem('token');
+  window.open(`/api/v1/admin/supervisors/${supId}/termination-letter/pdf?token=${token || ''}`, '_blank');
+}
+
+loadSupervisors();
+</script>
+{% endblock %}

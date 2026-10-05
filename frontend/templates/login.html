@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block title %}Sign In – Prashant Group{% endblock %}
+
+{% block content %}
+<section class="section" style="padding-top: 140px; min-height: 90vh;">
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-lg-5 col-md-7">
+        
+        <div class="text-center mb-4 fade-up">
+          <div class="logo-mark mx-auto mb-3" style="width: 44px; height: 44px; font-size: 26px; border-radius: 10px;">P</div>
+          <h1 style="font-size: clamp(2.2rem, 4vw, 3rem); margin-bottom: 0.5rem;">Welcome <em>Back</em></h1>
+          <p style="color: var(--ink-60); font-size: 15px;">Sign in to access your dashboard and manage applications.</p>
+        </div>
+
+        <div class="content-card fade-up fade-up-d1" style="padding: 2.5rem; border-radius: var(--radius-lg);">
+          <div id="loginAlert" class="pg-alert d-none"></div>
+
+          <form id="loginForm">
+            <div class="mb-3">
+              <label class="pg-form-label">Email Address *</label>
+              <input type="email" id="email" class="pg-input" placeholder="name@company.com or candidate email" required autocomplete="email">
+            </div>
+
+            <div class="mb-4">
+              <div class="d-flex justify-content-between align-items-center mb-1">
+                <label class="pg-form-label mb-0">Password *</label>
+              </div>
+              <input type="password" id="password" class="pg-input" placeholder="Enter your password" required autocomplete="current-password">
+            </div>
+
+            <button type="submit" id="loginBtn" class="btn-primary w-100" style="width: 100%; justify-content: center; padding: 14px;">
+              <i class="bi bi-box-arrow-in-right"></i> Sign In to Portal
+            </button>
+          </form>
+
+          <div class="text-center mt-4 pt-3" style="border-top: 1px solid var(--ink-05);">
+            <p style="font-size: 14px; color: var(--ink-60); margin-bottom: 0.5rem;">
+              New candidate? <a href="/register" style="color: var(--coral); font-weight: 700;">Create Candidate Account</a>
+            </p>
+            <p style="font-size: 13px; color: var(--ink-60); margin: 0;">
+              Supervisor Registration? <a href="/register/supervisor" style="color: var(--ink); font-weight: 600;">Click Here</a>
+            </p>
+          </div>
+
+          <!-- Demo Admin helper pill -->
+          <div class="mt-4 p-3 text-center" style="background: var(--peach); border-radius: var(--radius-sm); border: 1px solid rgba(239,70,35,0.15);">
+            <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--coral); margin-bottom: 4px;">Quick Demo Admin Login</div>
+            <div style="font-size: 12px; color: var(--ink);">admin@prashantgroupindia.in &nbsp;|&nbsp; password: <strong>admin123</strong></div>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const alertEl = document.getElementById('loginAlert');
+  const btn = document.getElementById('loginBtn');
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+
+  alertEl.className = 'pg-alert d-none';
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Authenticating...';
+
+  try {
+    const params = new URLSearchParams();
+    params.append('username', email);
+    params.append('password', password);
+
+    const response = await fetch('/api/v1/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: params.toString()
+    });
+
+    const resData = await response.json();
+    if (response.ok) {
+      localStorage.setItem('token', resData.access_token);
+      alertEl.className = 'pg-alert pg-alert-success';
+      alertEl.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i> Authentication successful! Redirecting...';
+      alertEl.classList.remove('d-none');
+
+      if (resData.role === 'SUPERVISOR' && navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(() => {}, () => {});
+      }
+
+      setTimeout(() => {
+        if (resData.role === 'ADMIN') {
+          window.location.href = '/dashboard/admin';
+        } else if (resData.role === 'WORKER') {
+          window.location.href = '/dashboard/worker';
+        } else if (resData.role === 'SUPERVISOR') {
+          window.location.href = '/dashboard/supervisor';
+        } else {
+          window.location.href = '/dashboard/candidate';
+        }
+      }, 500);
+    } else {
+      alertEl.className = 'pg-alert pg-alert-error';
+      alertEl.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-2"></i> ' + (resData.detail || 'Login failed. Please verify your credentials.');
+      alertEl.classList.remove('d-none');
+    }
+  } catch (err) {
+    alertEl.className = 'pg-alert pg-alert-error';
+    alertEl.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-2"></i> Server communication error. Please try again.';
+    alertEl.classList.remove('d-none');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-box-arrow-in-right"></i> Sign In to Portal';
+  }
+});
+</script>
+{% endblock %}

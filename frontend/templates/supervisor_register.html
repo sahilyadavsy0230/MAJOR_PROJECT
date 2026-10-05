@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% block title %}Supervisor Registration – Prashant Group{% endblock %}
+
+{% block content %}
+<section class="section" style="padding-top: 140px; min-height: 90vh;">
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-lg-6 col-md-8">
+        
+        <div class="text-center mb-4 fade-up">
+          <div class="hero-badge">
+            <i class="bi bi-person-gear"></i> Supervisor Portal
+          </div>
+          <h1 style="font-size: clamp(2.5rem, 5vw, 4rem); margin-bottom: 0.5rem;">Join as a <em>Supervisor</em></h1>
+          <p style="color: var(--ink-60); font-size: 15px;">Register your profile to manage deployed industrial workforce.</p>
+        </div>
+
+        <div class="content-card fade-up fade-up-d1" style="padding: 2.5rem; border-radius: var(--radius-lg);">
+          <div id="regAlert" class="pg-alert d-none"></div>
+
+          <form id="supervisorRegisterForm">
+            <div class="row g-3">
+              <div class="col-md-12">
+                <label class="pg-form-label">Full Name *</label>
+                <input type="text" name="name" class="pg-input" placeholder="e.g. Rahul Sharma" required>
+              </div>
+
+              <div class="col-md-6">
+                <label class="pg-form-label">Email Address *</label>
+                <input type="email" name="email" class="pg-input" placeholder="e.g. rahul@example.com" required>
+              </div>
+
+              <div class="col-md-6">
+                <label class="pg-form-label">Mobile Number *</label>
+                <input type="tel" name="phone" class="pg-input" placeholder="10-digit mobile number" required>
+              </div>
+
+              <div class="col-md-6">
+                <label class="pg-form-label">Area / Industrial Zone *</label>
+                <input type="text" name="area" class="pg-input" placeholder="e.g. Chakan / Bhosari" required>
+              </div>
+
+              <div class="col-md-6">
+                <label class="pg-form-label">City *</label>
+                <input type="text" name="city" class="pg-input" placeholder="e.g. Pune" required>
+              </div>
+
+              <div class="col-md-12">
+                <label class="pg-form-label">Address</label>
+                <textarea name="address" class="pg-input" rows="2" placeholder="Residential / Communication address"></textarea>
+              </div>
+
+              <div class="col-md-12">
+                <label class="pg-form-label">Create Initial Password *</label>
+                <input type="password" name="password" class="pg-input" placeholder="At least 6 characters" required minlength="6">
+              </div>
+            </div>
+
+            <div class="pg-alert pg-alert-info mt-4" style="font-size: 13px;">
+              <i class="bi bi-info-circle-fill me-2"></i>
+              <strong>Admin Approval Required:</strong> Your registration will be reviewed by Prashant Group administration. Once approved, you will receive company credentials for dashboard access.
+            </div>
+
+            <button type="submit" id="submitBtn" class="btn-primary w-100 mt-3" style="width: 100%; justify-content: center; padding: 14px;">
+              <i class="bi bi-person-check-fill"></i> Submit Supervisor Registration
+            </button>
+          </form>
+
+          <div class="text-center mt-4 pt-3" style="border-top: 1px solid var(--ink-05);">
+            <p style="font-size: 14px; color: var(--ink-60); margin-bottom: 0.5rem;">
+              Already registered or have company credentials? <a href="/login" style="color: var(--coral); font-weight: 700;">Login here</a>
+            </p>
+            <p style="font-size: 13px; color: var(--ink-60); margin: 0;">
+              Applying for jobs as a worker? <a href="/register" style="color: var(--ink); font-weight: 600;">Candidate Registration</a>
+            </p>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('supervisorRegisterForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const alertEl = document.getElementById('regAlert');
+  const btn = document.getElementById('submitBtn');
+  
+  alertEl.className = 'pg-alert d-none';
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Submitting...';
+
+  try {
+    const formData = new FormData(e.target);
+    const response = await fetch('/api/v1/supervisor/register', {
+      method: 'POST',
+      body: formData
+    });
+
+    const resData = await response.json();
+    if (response.ok) {
+      alertEl.className = 'pg-alert pg-alert-success';
+      alertEl.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i> ' + resData.message;
+      alertEl.classList.remove('d-none');
+      e.target.reset();
+    } else {
+      alertEl.className = 'pg-alert pg-alert-error';
+      alertEl.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-2"></i> ' + (resData.detail || 'Registration failed.');
+      alertEl.classList.remove('d-none');
+    }
+  } catch (err) {
+    alertEl.className = 'pg-alert pg-alert-error';
+    alertEl.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-2"></i> An error occurred. Please check server connection.';
+    alertEl.classList.remove('d-none');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-person-check-fill"></i> Submit Supervisor Registration';
+  }
+});
+</script>
+{% endblock %}

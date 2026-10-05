@@ -1,0 +1,181 @@
+{% extends "dashboard_base.html" %}
+{% block title %}Worker Dashboard – Prashant Group{% endblock %}
+
+{% block sidebar %}
+  <div class="sidebar-label">Worker Portal</div>
+  <a href="/dashboard/worker" class="sidebar-link active"><i class="bi bi-speedometer2"></i> Dashboard</a>
+  <a href="#attendance" onclick="showTab('attendance')" class="sidebar-link"><i class="bi bi-calendar-check"></i> Attendance</a>
+  <a href="#payroll" onclick="showTab('payroll')" class="sidebar-link"><i class="bi bi-cash-coin"></i> Payroll</a>
+  <a href="#complaints" onclick="showTab('complaints')" class="sidebar-link"><i class="bi bi-chat-left-text"></i> Complaints</a>
+{% endblock %}
+
+{% block content %}
+<!-- Worker Header -->
+<div id="workerHeader" style="background:var(--ink);border-radius:var(--radius-lg);padding:2rem;margin-bottom:1.5rem;color:#fff;">
+  <div style="display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap;">
+    <div class="candidate-avatar" id="workerAvatar" style="width:72px;height:72px;border-radius:14px;font-size:2.5rem;">
+      <i class="bi bi-person-fill"></i>
+    </div>
+    <div>
+      <div style="font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:rgba(255,255,255,0.5);margin-bottom:4px;">Worker ID</div>
+      <h2 id="workerIdStr" style="margin:0 0 4px;color:var(--coral);font-size:1.75rem;">Loading...</h2>
+      <h4 id="workerName" style="margin:0 0 4px;color:#fff;"></h4>
+      <p id="workerMeta" style="margin:0;font-size:13px;color:rgba(255,255,255,0.5);"></p>
+    </div>
+  </div>
+</div>
+
+<!-- Summary Stats -->
+<div class="row g-3 mb-4" id="workerStats">
+  <div class="col-md-4"><div class="stat-card"><div class="stat-icon"><i class="bi bi-calendar-check"></i></div><div class="stat-val" id="sAttendance">—</div><div class="stat-lab">Present Days</div></div></div>
+  <div class="col-md-4"><div class="stat-card"><div class="stat-icon"><i class="bi bi-file-earmark-text"></i></div><div class="stat-val" id="sPayslips">—</div><div class="stat-lab">Payslips</div></div></div>
+  <div class="col-md-4"><div class="stat-card"><div class="stat-icon"><i class="bi bi-chat-left-text"></i></div><div class="stat-val" id="sComplaints">—</div><div class="stat-lab">Open Complaints</div></div></div>
+</div>
+
+<!-- Tabs -->
+<div style="display:flex;gap:0.5rem;margin-bottom:1.5rem;">
+  <button onclick="showTab('attendance')" id="tab-attendance" class="btn-primary" style="padding:10px 20px;font-size:12px;">Attendance</button>
+  <button onclick="showTab('payroll')" id="tab-payroll" class="btn-secondary" style="padding:10px 20px;font-size:12px;">Payroll</button>
+  <button onclick="showTab('complaints')" id="tab-complaints" class="btn-secondary" style="padding:10px 20px;font-size:12px;">Complaints</button>
+</div>
+
+<!-- Attendance Tab -->
+<div id="tab-content-attendance" class="content-card">
+  <div class="content-card-header"><h5 style="margin:0;font-family:var(--font-serif);">Attendance Records</h5></div>
+  <div class="content-card-body" style="padding:0;">
+    <div style="overflow-x:auto;">
+      <table class="pg-table">
+        <thead><tr><th>Date</th><th>Status</th><th>Check In</th><th>Check Out</th></tr></thead>
+        <tbody id="attendanceBody"><tr><td colspan="4" style="text-align:center;padding:2rem;color:var(--ink-60);">Loading...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Payroll Tab -->
+<div id="tab-content-payroll" class="content-card" style="display:none;">
+  <div class="content-card-header"><h5 style="margin:0;font-family:var(--font-serif);">Payroll & Payslips</h5></div>
+  <div class="content-card-body" id="payrollBody" style="padding:1.5rem;">Loading...</div>
+</div>
+
+<!-- Complaints Tab -->
+<div id="tab-content-complaints" class="content-card" style="display:none;">
+  <div class="content-card-header">
+    <h5 style="margin:0;font-family:var(--font-serif);">Complaints</h5>
+    <button class="btn-primary" onclick="document.getElementById('complaintModal').style.display='flex'" style="padding:8px 16px;font-size:12px;">
+      <i class="bi bi-plus-lg"></i> New Complaint
+    </button>
+  </div>
+  <div class="content-card-body" id="complaintsBody">Loading...</div>
+</div>
+
+<!-- New Complaint Modal -->
+<div id="complaintModal" style="display:none;position:fixed;inset:0;background:rgba(45,59,66,0.6);backdrop-filter:blur(4px);z-index:9999;align-items:center;justify-content:center;padding:1rem;">
+  <div style="background:#fff;border-radius:var(--radius-lg);padding:2rem;max-width:480px;width:100%;">
+    <div style="display:flex;justify-content:space-between;margin-bottom:1.5rem;">
+      <h4 style="margin:0;font-family:var(--font-serif);">Submit Complaint</h4>
+      <button onclick="document.getElementById('complaintModal').style.display='none'" style="background:none;border:none;font-size:1.5rem;cursor:pointer;">&times;</button>
+    </div>
+    <form id="complaintForm">
+      <div class="mb-3"><label class="pg-form-label">Title *</label><input name="title" class="pg-input" required placeholder="Brief summary of your issue"></div>
+      <div class="mb-3"><label class="pg-form-label">Description *</label><textarea name="description" class="pg-input" rows="4" required placeholder="Describe your issue in detail..."></textarea></div>
+      <button type="submit" class="btn-primary" style="width:100%;justify-content:center;">Submit Complaint</button>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let activeTab = 'attendance';
+
+function showTab(tab) {
+  ['attendance','payroll','complaints'].forEach(t => {
+    document.getElementById(`tab-content-${t}`).style.display = t === tab ? 'block' : 'none';
+    const btn = document.getElementById(`tab-${t}`);
+    btn.className = t === tab ? 'btn-primary' : 'btn-secondary';
+    btn.style.cssText = 'padding:10px 20px;font-size:12px;';
+  });
+  activeTab = tab;
+}
+
+async function loadWorkerDashboard() {
+  const data = await apiGet('/api/v1/worker/dashboard');
+  if (!data) return;
+
+  const w = data.worker;
+  document.getElementById('workerIdStr').textContent = w.worker_id_str || '—';
+  document.getElementById('workerName').textContent  = w.full_name || '';
+  document.getElementById('workerMeta').textContent  = `${w.company || ''} · ${w.job_role || ''} · ${w.shift || ''} Shift`;
+
+  if (w.profile_photo) {
+    document.getElementById('workerAvatar').innerHTML = `<img src="/${w.profile_photo}" style="width:100%;height:100%;object-fit:cover;">`;
+  }
+
+  document.getElementById('sAttendance').textContent = data.summary.attendance_this_month;
+  document.getElementById('sPayslips').textContent   = data.summary.total_payslips;
+  document.getElementById('sComplaints').textContent = data.summary.open_complaints;
+
+  // Attendance
+  const tbody = document.getElementById('attendanceBody');
+  if (!data.attendances.length) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:2rem;color:var(--ink-60);">No attendance records yet.</td></tr>';
+  } else {
+    tbody.innerHTML = data.attendances.map(a => `
+      <tr>
+        <td>${a.date}</td>
+        <td><span class="status-pill ${a.status === 'PRESENT' ? 'status-selected' : 'status-rejected'}">${a.status}</span></td>
+        <td>${a.check_in || '—'}</td>
+        <td>${a.check_out || '—'}</td>
+      </tr>
+    `).join('');
+  }
+
+  // Payroll
+  const payEl = document.getElementById('payrollBody');
+  if (!data.payrolls.length) {
+    payEl.innerHTML = '<p style="color:var(--ink-60);text-align:center;padding:2rem 0;">No payslips available yet.</p>';
+  } else {
+    payEl.innerHTML = data.payrolls.map(p => `
+      <div style="border:1px solid var(--ink-05);border-radius:var(--radius-md);padding:1.5rem;margin-bottom:1rem;">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;">
+          <div>
+            <h5 style="margin:0 0 4px;">${p.month} ${p.year}</h5>
+            <p style="margin:0;font-size:13px;color:var(--ink-60);">Basic: ₹${p.basic_salary.toLocaleString('en-IN')} · Deductions: ₹${p.deductions.toLocaleString('en-IN')}</p>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-family:var(--font-serif);font-size:1.75rem;color:var(--coral);">₹${p.net_salary.toLocaleString('en-IN')}</div>
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-60);">Net Salary</div>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // Complaints
+  const compEl = document.getElementById('complaintsBody');
+  if (!data.complaints.length) {
+    compEl.innerHTML = '<p style="color:var(--ink-60);text-align:center;padding:2rem 0;">No complaints submitted.</p>';
+  } else {
+    compEl.innerHTML = data.complaints.map(c => `
+      <div style="padding:1rem 0;border-bottom:1px solid var(--ink-05);display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;">
+        <div>
+          <h5 style="margin:0 0 4px;font-size:0.95rem;">${c.title}</h5>
+          <p style="margin:0;font-size:12px;color:var(--ink-60);">${c.created_at ? c.created_at.split('T')[0] : ''}</p>
+        </div>
+        <span class="status-pill ${c.status === 'OPEN' ? 'status-applied' : 'status-selected'}">${c.status}</span>
+      </div>
+    `).join('');
+  }
+}
+
+document.getElementById('complaintForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const res = await apiPost('/api/v1/worker/complaints', fd);
+  if (res) { document.getElementById('complaintModal').style.display = 'none'; e.target.reset(); loadWorkerDashboard(); }
+});
+
+loadWorkerDashboard();
+</script>
+{% endblock %}

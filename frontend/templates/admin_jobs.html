@@ -1,0 +1,105 @@
+{% extends "dashboard_base.html" %}
+{% block title %}Jobs & Applications – Admin{% endblock %}
+
+{% block sidebar %}
+  <div class="sidebar-label">Main</div>
+  <a href="/dashboard/admin" class="sidebar-link"><i class="bi bi-speedometer2"></i> Overview</a>
+  <a href="/dashboard/admin/analytics" class="sidebar-link"><i class="bi bi-bar-chart-fill"></i> Analytics</a>
+  <div class="sidebar-label">Recruitment</div>
+  <a href="/dashboard/admin/jobs" class="sidebar-link active"><i class="bi bi-briefcase"></i> Jobs & Applications</a>
+  <a href="/dashboard/admin/candidates" class="sidebar-link"><i class="bi bi-people"></i> Candidates</a>
+  <a href="/dashboard/admin/workers" class="sidebar-link"><i class="bi bi-person-badge"></i> Workers</a>
+  <div class="sidebar-label">Management</div>
+  <a href="/dashboard/admin/supervisors" class="sidebar-link"><i class="bi bi-person-gear"></i> Supervisors</a>
+{% endblock %}
+
+{% block content %}
+<div class="dash-header">
+  <h1 class="dash-title">Jobs & Applications</h1>
+  <button class="btn-primary" onclick="document.getElementById('addJobModal').style.display='flex'">
+    <i class="bi bi-plus-lg"></i> Add Job
+  </button>
+</div>
+
+<div class="row g-3" id="jobsGrid">
+  <div class="col-12 text-center py-5" style="color:var(--ink-60);">
+    <div style="width:40px;height:40px;border:3px solid var(--coral);border-top-color:transparent;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 1rem;"></div>
+    Loading jobs...
+  </div>
+</div>
+
+<!-- Add Job Modal -->
+<div id="addJobModal" style="display:none;position:fixed;inset:0;background:rgba(45,59,66,0.6);backdrop-filter:blur(4px);z-index:9999;align-items:center;justify-content:center;padding:1rem;">
+  <div style="background:#fff;border-radius:var(--radius-lg);padding:2.5rem;max-width:600px;width:100%;max-height:90vh;overflow-y:auto;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2rem;">
+      <h3 style="margin:0;font-family:var(--font-serif);">Add New Job</h3>
+      <button onclick="document.getElementById('addJobModal').style.display='none'" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--ink-60);">&times;</button>
+    </div>
+    <form id="addJobForm">
+      <div class="row g-3">
+        <div class="col-md-6"><label class="pg-form-label">Job Title *</label><input name="title" class="pg-input" required></div>
+        <div class="col-md-6"><label class="pg-form-label">Company *</label><input name="company" class="pg-input" required></div>
+        <div class="col-md-6"><label class="pg-form-label">Role *</label>
+          <select name="role" class="pg-input">
+            <option>Picker</option><option>Packer</option><option>Loader</option><option>Driver</option>
+            <option>Delivery Boy</option><option>Security Guard</option><option>Warehouse Worker</option><option>Helper</option>
+          </select>
+        </div>
+        <div class="col-md-6"><label class="pg-form-label">Location *</label><input name="location" class="pg-input" required></div>
+        <div class="col-md-4"><label class="pg-form-label">Vacancies *</label><input name="vacancies" type="number" class="pg-input" required value="10"></div>
+        <div class="col-md-4"><label class="pg-form-label">Salary</label><input name="salary" class="pg-input" placeholder="₹15,000/month"></div>
+        <div class="col-md-4"><label class="pg-form-label">Shift</label>
+          <select name="shift" class="pg-input"><option>Day</option><option>Night</option><option>Rotational</option><option>Any</option></select>
+        </div>
+        <div class="col-md-6"><label class="pg-form-label">Qualification</label><input name="qualification" class="pg-input"></div>
+        <div class="col-12"><label class="pg-form-label">Description</label><textarea name="description" class="pg-input" rows="3"></textarea></div>
+      </div>
+      <button type="submit" class="btn-primary w-100 mt-4" style="width:100%;justify-content:center;">Create Job</button>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+async function loadJobs() {
+  const jobs = await apiGet('/api/v1/admin/jobs');
+  if (!jobs) return;
+  const grid = document.getElementById('jobsGrid');
+  if (!jobs.length) { grid.innerHTML = '<div class="col-12 text-center py-5" style="color:var(--ink-60);">No jobs found. Add one!</div>'; return; }
+
+  grid.innerHTML = jobs.map(j => `
+    <div class="col-lg-4 col-md-6">
+      <div class="job-card" style="cursor:pointer;" onclick="window.location='/dashboard/admin/job/${j.id}/applications'">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1rem;">
+          <span class="badge-peach">${j.role}</span>
+          <span class="${j.is_active ? 'badge-success' : 'badge-peach'}">${j.vacancies} Vacancies</span>
+        </div>
+        <h4 style="margin:0 0 4px;">${j.title}</h4>
+        <p style="font-size:14px;color:var(--ink-60);margin:0 0 1rem;"><i class="bi bi-building me-1"></i>${j.company}</p>
+        <div class="job-card-meta">
+          <span><i class="bi bi-geo-alt"></i> ${j.location}</span>
+          <span><i class="bi bi-cash"></i> ${j.salary || 'Not specified'}</span>
+          <span><i class="bi bi-clock"></i> ${j.shift || 'Any'}</span>
+        </div>
+        <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--ink-05);display:flex;justify-content:space-between;align-items:center;">
+          <div style="font-size:13px;font-weight:700;color:var(--coral);">
+            <i class="bi bi-people"></i> ${j.application_count} Application${j.application_count !== 1 ? 's' : ''}
+          </div>
+          <span style="font-size:12px;color:var(--ink-60);">Click to view →</span>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+document.getElementById('addJobForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const res = await apiPost('/api/v1/admin/jobs', fd);
+  if (res) { document.getElementById('addJobModal').style.display = 'none'; loadJobs(); }
+});
+
+loadJobs();
+</script>
+{% endblock %}

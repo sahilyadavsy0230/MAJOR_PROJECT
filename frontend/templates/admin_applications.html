@@ -1,0 +1,96 @@
+{% extends "dashboard_base.html" %}
+{% block title %}Applications – Admin{% endblock %}
+
+{% block sidebar %}
+  <div class="sidebar-label">Main</div>
+  <a href="/dashboard/admin" class="sidebar-link"><i class="bi bi-speedometer2"></i> Overview</a>
+  <a href="/dashboard/admin/analytics" class="sidebar-link"><i class="bi bi-bar-chart-fill"></i> Analytics</a>
+  <div class="sidebar-label">Recruitment</div>
+  <a href="/dashboard/admin/jobs" class="sidebar-link active"><i class="bi bi-briefcase"></i> Jobs & Applications</a>
+  <a href="/dashboard/admin/candidates" class="sidebar-link"><i class="bi bi-people"></i> Candidates</a>
+  <a href="/dashboard/admin/workers" class="sidebar-link"><i class="bi bi-person-badge"></i> Workers</a>
+  <div class="sidebar-label">Management</div>
+  <a href="/dashboard/admin/supervisors" class="sidebar-link"><i class="bi bi-person-gear"></i> Supervisors</a>
+{% endblock %}
+
+{% block content %}
+<div class="dash-header">
+  <div>
+    <a href="/dashboard/admin/jobs" style="font-size:13px;color:var(--ink-60);font-weight:600;"><i class="bi bi-arrow-left"></i> Back to Jobs</a>
+    <h1 class="dash-title mt-1" id="jobTitle">Applications</h1>
+    <p id="jobMeta" style="color:var(--ink-60);font-size:14px;margin:0;"></p>
+  </div>
+  <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
+    <select id="statusFilter" class="pg-input" style="width:auto;padding:10px 16px;font-size:13px;" onchange="renderApps()">
+      <option value="">All Statuses</option>
+      <option value="APPLIED">Applied</option>
+      <option value="SHORTLISTED">Shortlisted</option>
+      <option value="INTERVIEW">Interview</option>
+      <option value="SELECTED">Selected</option>
+      <option value="REJECTED">Rejected</option>
+    </select>
+  </div>
+</div>
+
+<div id="appsList" class="row g-3">
+  <div class="col-12 text-center py-5" style="color:var(--ink-60);">Loading applications...</div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const jobId = {{ job_id }};
+let allApps = [];
+
+async function loadApps() {
+  const data = await apiGet(`/api/v1/admin/jobs/${jobId}/applications`);
+  if (!data) return;
+  allApps = data.applications;
+  const job = data.job;
+  document.getElementById('jobTitle').textContent = job.title;
+  document.getElementById('jobMeta').textContent = `${job.company} · ${job.role}`;
+  renderApps();
+}
+
+function renderApps() {
+  const filter = document.getElementById('statusFilter').value;
+  const apps = filter ? allApps.filter(a => a.status === filter) : allApps;
+  const container = document.getElementById('appsList');
+
+  if (!apps.length) {
+    container.innerHTML = '<div class="col-12 text-center py-5" style="color:var(--ink-60);">No applications found for this filter.</div>';
+    return;
+  }
+
+  container.innerHTML = apps.map(a => {
+    const photoSrc = a.candidate.profile_photo
+      ? `/${a.candidate.profile_photo}`
+      : null;
+    return `
+    <div class="col-lg-4 col-md-6">
+      <div class="candidate-card" onclick="window.location='/dashboard/admin/application/${a.id}'" style="cursor:pointer; flex-direction:column; align-items:flex-start; gap:0.75rem;">
+        <div style="display:flex;align-items:center;gap:1rem;width:100%;">
+          <div class="candidate-avatar">
+            ${photoSrc ? `<img src="${photoSrc}" alt="${a.candidate.full_name}">` : `<i class="bi bi-person-fill"></i>`}
+          </div>
+          <div style="flex:1;min-width:0;">
+            <h5 style="margin:0;font-size:1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${a.candidate.full_name}</h5>
+            <p style="margin:0;font-size:13px;color:var(--ink-60);">${a.candidate.phone}</p>
+          </div>
+          <span class="status-pill status-${a.status.toLowerCase()}">${a.status}</span>
+        </div>
+        <div style="width:100%;display:flex;gap:8px;flex-wrap:wrap;font-size:12px;color:var(--ink-60);">
+          <span><i class="bi bi-geo-alt"></i> ${a.candidate.city || '—'}</span>
+          <span><i class="bi bi-mortarboard"></i> ${a.candidate.qualification || '—'}</span>
+          <span><i class="bi bi-calendar"></i> ${a.applied_date ? a.applied_date.split('T')[0] : '—'}</span>
+        </div>
+        ${a.deployment ? `<div style="width:100%;"><span class="badge-success"><i class="bi bi-person-badge"></i> ${a.deployment.worker_id_str}</span></div>` : ''}
+      </div>
+    </div>
+    `;
+  }).join('');
+}
+
+loadApps();
+</script>
+{% endblock %}
