@@ -81,7 +81,13 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
       body: params.toString()
     });
 
-    const resData = await response.json();
+    let resData;
+    try {
+      resData = await response.json();
+    } catch (e) {
+      resData = { detail: `Server returned error (${response.status} ${response.statusText})` };
+    }
+
     if (response.ok) {
       localStorage.setItem('token', resData.access_token);
       alertEl.className = 'pg-alert pg-alert-success';
@@ -109,8 +115,9 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
       alertEl.classList.remove('d-none');
     }
   } catch (err) {
+    console.error('Login error:', err);
     alertEl.className = 'pg-alert pg-alert-error';
-    alertEl.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-2"></i> Server communication error. Please try again.';
+    alertEl.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-2"></i> Connection error. Make sure the server is running on http://127.0.0.1:8000.';
     alertEl.classList.remove('d-none');
   } finally {
     btn.disabled = false;
