@@ -1,5 +1,5 @@
-{% extends "dashboard_base.html" %}
-{% block title %}Deploy Candidate – Admin{% endblock %}
+﻿{% extends "dashboard_base.html" %}
+{% block title %}Deploy Candidate â€“ Admin{% endblock %}
 
 {% block sidebar %}
   <div class="sidebar-label">Main</div>
@@ -11,6 +11,7 @@
   <a href="/dashboard/admin/workers" class="sidebar-link"><i class="bi bi-person-badge"></i> Workers</a>
   <div class="sidebar-label">Management</div>
   <a href="/dashboard/admin/supervisors" class="sidebar-link"><i class="bi bi-person-gear"></i> Supervisors</a>
+  <a href="/dashboard/admin/complaints" class="sidebar-link"><i class="bi bi-chat-left-text"></i> Complaints</a>
 {% endblock %}
 
 {% block content %}
@@ -66,7 +67,7 @@
             <div class="col-md-6">
               <label class="pg-form-label">Assign Supervisor</label>
               <select name="supervisor_id" id="supervisorSelect" class="pg-input">
-                <option value="">— Select Supervisor —</option>
+                <option value="">â€” Select Supervisor â€”</option>
               </select>
             </div>
           </div>
@@ -107,7 +108,7 @@ async function loadData() {
         </div>
         <div>
           <h5 style="margin:0;">${c.full_name}</h5>
-          <p style="margin:0;font-size:13px;color:var(--ink-60);">${c.phone} · ${c.email}</p>
+          <p style="margin:0;font-size:13px;color:var(--ink-60);">${c.phone} Â· ${c.email}</p>
           <div style="margin-top:6px;"><span class="badge-peach">${j.role}</span> <span style="font-size:13px;font-weight:600;margin-left:8px;">${j.title} @ ${j.company}</span></div>
         </div>
       </div>
@@ -138,7 +139,7 @@ document.getElementById('deployForm').addEventListener('submit', async (e) => {
   const fd = new FormData(e.target);
   const res = await apiPost(`/api/v1/deployment/deploy/${appId}`, fd);
   if (res) {
-    alert(`✅ Deployed successfully!\nWorker ID: ${res.worker_id}\nConfirmation email sent.`);
+    alert(`âœ… Deployed successfully!\nWorker ID: ${res.worker_id}\nConfirmation email sent.`);
     window.location.href = '/dashboard/admin/workers';
   }
 });

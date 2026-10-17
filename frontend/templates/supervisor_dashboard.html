@@ -54,6 +54,7 @@
   <div class="sidebar-label">Supervisor Portal</div>
   <a href="#attendanceSection" onclick="switchTab('attendance')" id="tabNavAttendance" class="sidebar-link active"><i class="bi bi-calendar-check-fill"></i> Daily Attendance</a>
   <a href="#workforceSection" onclick="switchTab('workforce')" id="tabNavWorkforce" class="sidebar-link"><i class="bi bi-people-fill"></i> My Workforce</a>
+  <a href="#complaintsSection" onclick="switchTab('complaints')" id="tabNavComplaints" class="sidebar-link"><i class="bi bi-chat-left-text"></i> Worker Complaints</a>
   <div class="sidebar-label">Account</div>
   <a href="/login" onclick="logout()" class="sidebar-link" style="color:var(--coral);"><i class="bi bi-box-arrow-right"></i> Sign Out</a>
 {% endblock %}
@@ -204,37 +205,70 @@
   </div>
 </div>
 
-<!-- TAB 2: MY WORKFORCE DIRECTORY -->
+<!-- TAB 2: MY WORKFORCE DIRECTORY (Company-wise ID Cards) -->
 <div id="sectionWorkforce" class="d-none">
-  <div class="content-card">
-    <div class="content-card-header d-flex justify-content-between align-items-center">
-      <h5 style="margin: 0; font-family: var(--font-serif);">
-        <i class="bi bi-people-fill text-coral me-2"></i> Assigned Workforce Directory
-      </h5>
-      <span class="badge-ink" id="workforceCountBadge">0 Workers</span>
+  <div class="dash-header" style="margin-bottom:1.5rem;">
+    <div>
+      <h5 style="margin:0;font-family:var(--font-serif);font-size:1.3rem;"><i class="bi bi-people-fill text-coral me-2"></i> My Assigned Workforce</h5>
+      <p style="margin:4px 0 0;color:var(--ink-60);font-size:13px;">Company-wise view. Click a company to expand and see worker ID cards.</p>
     </div>
-    <div class="content-card-body p-0">
-      <div class="table-responsive">
-        <table class="pg-table" style="margin-bottom: 0;">
-          <thead>
-            <tr>
-              <th>Worker ID</th>
-              <th>Full Name</th>
-              <th>Phone</th>
-              <th>Assigned Company</th>
-              <th>Job Role</th>
-              <th>Deployment Site</th>
-              <th>Shift</th>
-              <th>Joining Date</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody id="workforceTableBody">
-            <tr><td colspan="9" style="text-align: center; padding: 3rem; color: var(--ink-60);">Loading workforce...</td></tr>
-          </tbody>
-        </table>
+    <input type="text" id="wfSearchInput" class="pg-input" placeholder="Search worker..." style="width:220px;padding:8px 14px;font-size:13px;" oninput="filterWorkforce()">
+  </div>
+  <div id="wfStatsBar" class="row g-3 mb-3"></div>
+  <div id="wfCompanyAccordion" style="display:flex;flex-direction:column;gap:1rem;">
+    <div class="content-card" style="text-align:center;padding:2rem;color:var(--ink-60);">Loading workforce...</div>
+  </div>
+</div>
+
+<!-- TAB 3: WORKER COMPLAINTS -->
+<div id="sectionComplaints" class="d-none">
+  <div class="dash-header" style="margin-bottom:1.5rem;">
+    <div>
+      <h5 style="margin:0;font-family:var(--font-serif);font-size:1.3rem;"><i class="bi bi-chat-left-text text-coral me-2"></i> Worker Complaints</h5>
+      <p style="margin:4px 0 0;color:var(--ink-60);font-size:13px;">Complaints filed by workers under your supervision. Reply and take action.</p>
+    </div>
+    <select id="cmpFilterStatus" class="pg-input" style="padding:8px 12px;font-size:13px;width:150px;" onchange="loadSupComplaints()">
+      <option value="">All Status</option>
+      <option value="OPEN">Open</option>
+      <option value="IN_PROGRESS">In Progress</option>
+      <option value="RESOLVED">Resolved</option>
+    </select>
+  </div>
+  <div id="supComplaintsList" style="display:flex;flex-direction:column;gap:1rem;">
+    <div class="content-card" style="text-align:center;padding:2rem;color:var(--ink-60);">Loading complaints...</div>
+  </div>
+</div>
+
+<!-- SUPERVISOR COMPLAINT REPLY MODAL -->
+<div id="supReplyModal" style="display:none;position:fixed;inset:0;background:rgba(45,59,66,0.6);backdrop-filter:blur(4px);z-index:9999;align-items:center;justify-content:center;padding:1.5rem;">
+  <div style="background:#fff;border-radius:var(--radius-lg);padding:2.25rem;max-width:580px;width:100%;max-height:90vh;overflow-y:auto;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.25rem;">
+      <h4 style="margin:0;font-family:var(--font-serif);"><i class="bi bi-reply-fill text-coral me-2"></i> Take Action on Complaint</h4>
+      <button onclick="document.getElementById('supReplyModal').style.display='none'" style="background:none;border:none;font-size:1.5rem;cursor:pointer;">&times;</button>
+    </div>
+    <div id="supReplyDetails" style="background:var(--ink-02);border:1px solid var(--ink-05);border-radius:var(--radius-sm);padding:1rem;margin-bottom:1rem;font-size:13px;"></div>
+    <form id="supReplyForm">
+      <input type="hidden" id="supReplyComplaintId">
+      <div class="mb-3">
+        <label class="pg-form-label">Your Reply / Response *</label>
+        <textarea id="supReplyText" class="pg-input" rows="4" placeholder="Describe the action you are taking or have taken..." required style="resize:vertical;"></textarea>
       </div>
-    </div>
+      <div class="mb-3">
+        <label class="pg-form-label">Action Taken (brief description) *</label>
+        <input type="text" id="supActionText" class="pg-input" placeholder="e.g. Escalated to HR, Resolved on-site, Equipment replaced" required>
+      </div>
+      <div class="mb-3">
+        <label class="pg-form-label">Update Status</label>
+        <select id="supReplyStatus" class="pg-input">
+          <option value="IN_PROGRESS">In Progress</option>
+          <option value="RESOLVED">Resolved</option>
+        </select>
+      </div>
+      <div class="d-flex gap-2">
+        <button type="button" onclick="document.getElementById('supReplyModal').style.display='none'" class="btn-secondary" style="flex:1;justify-content:center;">Cancel</button>
+        <button type="submit" id="btnSupSendReply" class="btn-primary" style="flex:1;justify-content:center;"><i class="bi bi-send me-1"></i> Submit Action</button>
+      </div>
+    </form>
   </div>
 </div>
 
@@ -416,18 +450,18 @@ function changeDate(delta) {
 }
 
 function switchTab(tab) {
-  if (tab === 'attendance') {
-    document.getElementById('sectionAttendance').classList.remove('d-none');
-    document.getElementById('sectionWorkforce').classList.add('d-none');
-    document.getElementById('tabNavAttendance').classList.add('active');
-    document.getElementById('tabNavWorkforce').classList.remove('active');
-  } else {
-    document.getElementById('sectionAttendance').classList.add('d-none');
-    document.getElementById('sectionWorkforce').classList.remove('d-none');
-    document.getElementById('tabNavAttendance').classList.remove('active');
-    document.getElementById('tabNavWorkforce').classList.add('active');
-    renderWorkforceTable();
-  }
+  const sections = ['Attendance','Workforce','Complaints'];
+  sections.forEach(s => {
+    document.getElementById(`section${s}`).classList.add('d-none');
+    const navEl = document.getElementById(`tabNav${s}`);
+    if (navEl) navEl.classList.remove('active');
+  });
+  const tabName = tab.charAt(0).toUpperCase() + tab.slice(1);
+  document.getElementById(`section${tabName}`).classList.remove('d-none');
+  const navEl = document.getElementById(`tabNav${tabName}`);
+  if (navEl) navEl.classList.add('active');
+  if (tab === 'workforce') renderWorkforceCards();
+  if (tab === 'complaints') loadSupComplaints();
 }
 
 async function loadSupervisorProfile() {
@@ -445,7 +479,7 @@ async function loadSupervisorProfile() {
   document.getElementById('statPresent').textContent = data.stats.present_today;
   document.getElementById('statAbsent').textContent = data.stats.absent_today;
   document.getElementById('statPending').textContent = data.stats.pending_today;
-  document.getElementById('workforceCountBadge').textContent = `${data.stats.total_workers} Workers`;
+  // workforce count shown in cards section
 }
 
 async function loadAttendance() {
@@ -599,27 +633,204 @@ function escapeHtml(str) {
   return str.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 }
 
-function renderWorkforceTable() {
+function renderWorkforceCards() {
   if (!supervisorData || !supervisorData.workers) return;
-  const tbody = document.getElementById('workforceTableBody');
-  if (!supervisorData.workers.length) {
-    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:3rem;color:var(--ink-60);">No workers assigned under your supervision.</td></tr>';
+  const workers = supervisorData.workers;
+  const container = document.getElementById('wfCompanyAccordion');
+  const statsBar = document.getElementById('wfStatsBar');
+
+  if (!workers.length) {
+    container.innerHTML = '<div class="content-card" style="text-align:center;padding:2rem;color:var(--ink-60);">No workers assigned under your supervision.</div>';
+    statsBar.innerHTML = '';
     return;
   }
-  tbody.innerHTML = supervisorData.workers.map(w => `
-    <tr>
-      <td><strong class="badge-ink">${escapeHtml(w.worker_id_str || 'PGW-' + w.id)}</strong></td>
-      <td style="font-weight:700;">${escapeHtml(w.name)}</td>
-      <td>${escapeHtml(w.phone)}</td>
-      <td>${escapeHtml(w.company)}</td>
-      <td>${escapeHtml(w.job_role)}</td>
-      <td><i class="bi bi-geo-alt me-1 text-coral"></i>${escapeHtml(w.area || 'Plant Site')}</td>
-      <td><span class="badge-peach">${escapeHtml(w.shift)}</span></td>
-      <td>${escapeHtml(w.joining_date || '—')}</td>
-      <td><span class="status-pill status-selected"><i class="bi bi-check-circle-fill me-1"></i> Active</span></td>
-    </tr>
-  `).join('');
+
+  // Group by company
+  const groups = {};
+  for (const w of workers) {
+    const co = w.company || 'Unassigned';
+    if (!groups[co]) groups[co] = [];
+    groups[co].push(w);
+  }
+  const companyNames = Object.keys(groups).sort();
+
+  statsBar.innerHTML = `
+    <div class="col-4"><div class="content-card" style="padding:0.9rem;text-align:center;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--ink-60);">Companies</div>
+      <div style="font-size:1.6rem;font-weight:800;color:var(--coral);">${companyNames.length}</div>
+    </div></div>
+    <div class="col-4"><div class="content-card" style="padding:0.9rem;text-align:center;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--ink-60);">Total Workers</div>
+      <div style="font-size:1.6rem;font-weight:800;color:var(--ink);">${workers.length}</div>
+    </div></div>
+    <div class="col-4"><div class="content-card" style="padding:0.9rem;text-align:center;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--ink-60);">Active</div>
+      <div style="font-size:1.6rem;font-weight:800;color:#16A34A;">${workers.length}</div>
+    </div></div>`;
+
+  container.innerHTML = companyNames.map((co, idx) => {
+    const cwks = groups[co];
+    const bodyId = `wfcb-${idx}`, headerId = `wfch-${idx}`;
+    return `
+      <div style="background:#fff;border:1px solid var(--ink-05);border-radius:var(--radius-lg);overflow:hidden;">
+        <div id="${headerId}" onclick="toggleWfCompany('${bodyId}','${headerId}')" style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.5rem;cursor:pointer;background:linear-gradient(90deg,#fff,#fafafa);" class="wf-company-header">
+          <div style="display:flex;align-items:center;gap:0.85rem;">
+            <div style="width:42px;height:42px;background:linear-gradient(135deg,var(--coral),#e07055);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1rem;"><i class="bi bi-buildings"></i></div>
+            <div>
+              <div style="font-size:1rem;font-weight:700;color:var(--ink);">${escapeHtml(co)}</div>
+              <div style="font-size:12px;color:var(--ink-60);">${cwks.length} worker${cwks.length!==1?'s':''}</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:0.5rem;">
+            <span class="status-pill status-selected" style="font-size:11px;">${cwks.length} Active</span>
+            <i class="bi bi-chevron-down" style="transition:transform 0.25s;color:var(--ink-60);"></i>
+          </div>
+        </div>
+        <div id="${bodyId}" style="display:none;padding:1.25rem 1.5rem;">
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:1rem;">
+            ${cwks.map(w => `
+              <div style="border:1px solid var(--ink-05);border-radius:var(--radius-md);overflow:hidden;">
+                <div style="background:linear-gradient(135deg,#2d3b42,#455a64);padding:0.8rem;display:flex;align-items:center;gap:0.65rem;">
+                  <div style="width:40px;height:40px;border-radius:9px;background:rgba(255,255,255,0.15);border:2px solid rgba(255,255,255,0.3);display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.1rem;flex-shrink:0;">
+                    ${w.profile_photo ? `<img src="/${w.profile_photo}" style="width:100%;height:100%;object-fit:cover;">` : '<i class="bi bi-person-fill"></i>'}
+                  </div>
+                  <div style="flex:1;min-width:0;">
+                    <div style="font-size:0.8rem;font-weight:700;color:#fff;line-height:1.3;">${escapeHtml(w.name)}</div>
+                    <div style="font-size:10px;color:rgba(255,255,255,0.7);font-family:monospace;">${escapeHtml(w.worker_id_str||'PGW-'+w.id)}</div>
+                  </div>
+                </div>
+                <div style="padding:0.7rem 0.85rem;font-size:12px;">
+                  <div style="display:flex;gap:0.35rem;align-items:center;color:var(--ink-60);margin-bottom:0.3rem;"><i class="bi bi-briefcase"></i> <strong style="color:var(--ink);">${escapeHtml(w.job_role)}</strong></div>
+                  <div style="display:flex;gap:0.35rem;align-items:center;color:var(--ink-60);margin-bottom:0.3rem;"><i class="bi bi-clock"></i> ${escapeHtml(w.shift)} shift</div>
+                  <div style="display:flex;gap:0.35rem;align-items:center;color:var(--ink-60);margin-bottom:0.3rem;"><i class="bi bi-geo-alt"></i> ${escapeHtml(w.area||'Factory Site')}</div>
+                  <div style="display:flex;gap:0.35rem;align-items:center;color:var(--ink-60);"><i class="bi bi-telephone"></i> ${escapeHtml(w.phone)}</div>
+                </div>
+              </div>`).join('')}
+          </div>
+        </div>
+      </div>`;
+  }).join('');
 }
+
+function toggleWfCompany(bodyId, headerId) {
+  const body = document.getElementById(bodyId);
+  const header = document.getElementById(headerId);
+  const isOpen = body.style.display !== 'none';
+  body.style.display = isOpen ? 'none' : 'block';
+  const chevron = header.querySelector('.bi-chevron-down,.bi-chevron-up');
+  if (chevron) {
+    chevron.className = isOpen ? 'bi bi-chevron-down' : 'bi bi-chevron-up';
+    chevron.style.transform = isOpen ? '' : 'rotate(180deg)';
+  }
+}
+
+function filterWorkforce() {
+  if (!supervisorData) return;
+  const q = document.getElementById('wfSearchInput').value.toLowerCase();
+  if (!q) { renderWorkforceCards(); return; }
+  const filtered = supervisorData.workers.filter(w =>
+    (w.name||'').toLowerCase().includes(q) ||
+    (w.worker_id_str||'').toLowerCase().includes(q) ||
+    (w.company||'').toLowerCase().includes(q) ||
+    (w.phone||'').includes(q)
+  );
+  // Temporarily override and render
+  const orig = supervisorData.workers;
+  supervisorData.workers = filtered;
+  renderWorkforceCards();
+  supervisorData.workers = orig;
+  // Auto-open all
+  setTimeout(() => {
+    document.querySelectorAll('[id^="wfcb-"]').forEach(b => b.style.display = 'block');
+  }, 50);
+}
+
+// ─── SUPERVISOR COMPLAINTS ─────────────────────────────────────────────────────
+let allSupComplaints = [];
+
+async function loadSupComplaints() {
+  const res = await apiGet('/api/v1/supervisor/complaints');
+  if (!res) return;
+  allSupComplaints = res;
+  const statusFilter = document.getElementById('cmpFilterStatus').value;
+  const filtered = statusFilter ? res.filter(c => c.status === statusFilter) : res;
+  renderSupComplaints(filtered);
+}
+
+function renderSupComplaints(complaints) {
+  const list = document.getElementById('supComplaintsList');
+  if (!complaints.length) {
+    list.innerHTML = '<div class="content-card" style="text-align:center;padding:2rem;color:var(--ink-60);"><i class="bi bi-chat-left-text" style="font-size:2rem;"></i><p class="mt-2">No complaints to show.</p></div>';
+    return;
+  }
+  list.innerHTML = complaints.map(c => {
+    const statusColors = {OPEN:'#D97706',IN_PROGRESS:'#2563EB',RESOLVED:'#16A34A',CLOSED:'#6B7280'};
+    const statusBg = {OPEN:'#FEF3C7',IN_PROGRESS:'#EFF6FF',RESOLVED:'#EBF8F2',CLOSED:'#F3F4F6'};
+    const sc = statusColors[c.status] || '#6B7280', sb = statusBg[c.status] || '#F3F4F6';
+    const dateStr = c.created_at ? new Date(c.created_at).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : '—';
+    const myReplyHtml = c.supervisor_reply
+      ? `<div style="background:#EBF8F2;border:1px solid rgba(22,163,74,0.15);border-radius:var(--radius-sm);padding:0.75rem;margin-top:0.75rem;font-size:13px;">
+          <div style="font-size:11px;font-weight:700;color:#16A34A;text-transform:uppercase;margin-bottom:4px;"><i class="bi bi-check-circle-fill me-1"></i> Your Reply</div>
+          <div>${escapeHtml(c.supervisor_reply)}</div>
+          ${c.supervisor_action ? `<div style="margin-top:4px;color:var(--ink-60);">Action: <strong>${escapeHtml(c.supervisor_action)}</strong></div>` : ''}
+        </div>` : '';
+    return `
+      <div style="background:#fff;border:1px solid var(--ink-05);border-radius:var(--radius-lg);overflow:hidden;">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;padding:1rem 1.5rem;border-bottom:1px solid var(--ink-05);flex-wrap:wrap;gap:0.75rem;">
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+              <strong>${escapeHtml(c.title)}</strong>
+              <span style="background:${sb};color:${sc};padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;">${c.status.replace('_',' ')}</span>
+            </div>
+            <div style="font-size:12px;color:var(--ink-60);margin-top:4px;">
+              <i class="bi bi-person me-1"></i> ${escapeHtml(c.worker_name)} &nbsp;·&nbsp;
+              <i class="bi bi-buildings me-1"></i> ${escapeHtml(c.company||'—')} &nbsp;·&nbsp;
+              <i class="bi bi-calendar3 me-1"></i> ${dateStr}
+            </div>
+          </div>
+          <button class="btn-primary" onclick="openSupReplyModal(${c.id},'${escapeHtml(c.title)}','${escapeHtml(c.description)}','${escapeHtml(c.worker_name)}','${c.status}')" style="padding:6px 14px;font-size:12px;">
+            <i class="bi bi-reply-fill me-1"></i> ${c.supervisor_reply ? 'Update' : 'Take Action'}
+          </button>
+        </div>
+        <div style="padding:1rem 1.5rem;font-size:13px;color:var(--ink);">
+          ${escapeHtml(c.description)}
+          ${myReplyHtml}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function openSupReplyModal(id, title, desc, workerName, status) {
+  document.getElementById('supReplyComplaintId').value = id;
+  document.getElementById('supReplyText').value = '';
+  document.getElementById('supActionText').value = '';
+  document.getElementById('supReplyStatus').value = status === 'OPEN' ? 'IN_PROGRESS' : status;
+  document.getElementById('supReplyDetails').innerHTML = `
+    <div style="font-weight:700;margin-bottom:4px;">${escapeHtml(title)}</div>
+    <div style="color:var(--ink-60);">${escapeHtml(desc)}</div>
+    <div style="margin-top:6px;font-size:12px;">Worker: <strong>${escapeHtml(workerName)}</strong></div>`;
+  document.getElementById('supReplyModal').style.display = 'flex';
+}
+
+document.getElementById('supReplyForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById('btnSupSendReply');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Submitting...';
+  const cid = document.getElementById('supReplyComplaintId').value;
+  const fd = new FormData();
+  fd.append('reply', document.getElementById('supReplyText').value.trim());
+  fd.append('action', document.getElementById('supActionText').value.trim());
+  fd.append('new_status', document.getElementById('supReplyStatus').value);
+  const res = await apiPost(`/api/v1/supervisor/complaints/${cid}/action`, fd);
+  btn.disabled = false;
+  btn.innerHTML = '<i class="bi bi-send me-1"></i> Submit Action';
+  if (res) {
+    document.getElementById('supReplyModal').style.display = 'none';
+    alert('✅ Action submitted successfully!');
+    loadSupComplaints();
+  }
+});
 
 // Initial Boot
 document.getElementById('attDateInput').value = currentAttendanceDate;

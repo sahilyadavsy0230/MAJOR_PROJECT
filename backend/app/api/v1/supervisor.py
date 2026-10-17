@@ -177,6 +177,7 @@ def supervisor_dashboard(
 @router.get("/attendance")
 def get_attendance_sheet(
     target_date: Optional[str] = Query(None, alias="date"),
+    company: Optional[str] = Query(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
@@ -188,6 +189,8 @@ def get_attendance_sheet(
         raise HTTPException(status_code=400, detail="Invalid date format. Expected YYYY-MM-DD")
 
     deployments = _get_supervisor_deployments(sup, db, only_active=True)
+    if company and company not in ("All", "All Companies"):
+        deployments = [d for d in deployments if d.company == company]
 
     records = []
     counts = {"PRESENT": 0, "ABSENT": 0, "HALF_DAY": 0, "LEAVE": 0, "NOT_MARKED": 0}
@@ -366,6 +369,7 @@ def mark_single_attendance(
 def mark_all_attendance(
     target_date: str = Form(..., alias="date"),
     status_str: str = Form("PRESENT", alias="status"),
+    company: Optional[str] = Form(None),
     latitude: Optional[str] = Form(None),
     longitude: Optional[str] = Form(None),
     location_address: Optional[str] = Form(None),
@@ -390,6 +394,8 @@ def mark_all_attendance(
 
     status_upper = status_str.upper()
     deployments = _get_supervisor_deployments(sup, db, only_active=True)
+    if company and company not in ("All", "All Companies"):
+        deployments = [d for d in deployments if d.company == company]
 
     marked_count = 0
     seen_deps = set()
@@ -485,5 +491,76 @@ def set_supervisor_offline(
         sup.last_seen_at = None
         db.commit()
     return {"status": "ok", "message": "Supervisor status set to offline"}
+
+
+# ─── WORKER COMPLAINTS RESOLUTION (SUPERVISOR) ──────────────────────────────
+@router.get("/complaints")
+def list_supervisor_complaints(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    sup = _get_supervisor_profile(current_user, db)
+    deployments = _get_supervisor_deployments(sup, db, only_active=False)
+    wp_ids = [d.worker_profile.id for d in deployments if d.worker_profile]
+    
+    if not wp_ids:
+        return []
+    
+    complaints = db.query(Complaint).filter(Complaint.worker_id.in_(wp_ids)).order_by(Complaint.created_at.desc()).all()
+    result = []
+    for c in complaints:
+        wp = c.worker
+        dep = wp.deployment if wp else None
+        cp = dep.application.candidate if (dep and dep.application) else (wp.user.candidate_profile if (wp and wp.user) else None)
+        
+        result.append({
+            "id": c.id,
+            "worker_id": wp.id if wp else None,
+            "worker_id_str": dep.worker_id_str if dep else f"PGW-{wp.id}",
+            "worker_name": cp.full_name if cp else "Worker",
+            "worker_phone": cp.phone if cp else "—",
+            "company": dep.company if dep else "—",
+            "area": dep.area if dep else "—",
+            "title": c.title,
+            "description": c.description,
+            "status": c.status,
+            "created_at": c.created_at.isoformat() if c.created_at else None,
+            "supervisor_reply": c.supervisor_reply,
+            "supervisor_action": c.supervisor_action,
+            "supervisor_replied_at": c.supervisor_replied_at.isoformat() if c.supervisor_replied_at else None,
+            "admin_reply": c.admin_reply,
+            "admin_replied_at": c.admin_replied_at.isoformat() if c.admin_replied_at else None,
+        })
+    return result
+
+
+@router.post("/complaints/{complaint_id}/action")
+def take_complaint_action_supervisor(
+    complaint_id: int,
+    action: str = Form(...),         # e.g., "Action Taken - Resolved on Site", "Investigating", "Escalated to Management"
+    reply: str = Form(...),          # Detailed explanation / reply from supervisor
+    new_status: Optional[str] = Form("IN_PROGRESS"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    sup = _get_supervisor_profile(current_user, db)
+    c = db.query(Complaint).filter(Complaint.id == complaint_id).first()
+    if not c:
+        raise HTTPException(status_code=404, detail="Complaint not found")
+    
+    # Check if worker belongs to supervisor
+    deployments = _get_supervisor_deployments(sup, db, only_active=False)
+    wp_ids = [d.worker_profile.id for d in deployments if d.worker_profile]
+    if c.worker_id not in wp_ids and current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Worker complaint is outside your assigned supervision")
+    
+    c.supervisor_action = action.strip()
+    c.supervisor_reply = reply.strip()
+    c.supervisor_replied_at = datetime.utcnow()
+    if new_status and new_status.strip():
+        c.status = new_status.strip().upper()
+    db.commit()
+    return {"message": "Supervisor action and reply recorded successfully", "status": c.status}
+
 
 

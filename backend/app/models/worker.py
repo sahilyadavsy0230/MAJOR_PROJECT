@@ -58,4 +58,13 @@ class Complaint(Base):
     status = Column(String, default="OPEN") # OPEN, IN_PROGRESS, RESOLVED
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
+    # Supervisor response & action tracking
+    supervisor_reply = Column(Text, nullable=True)
+    supervisor_action = Column(String, nullable=True) # e.g., "Action Taken - Resolved on Site", "Investigating", "Escalated"
+    supervisor_replied_at = Column(DateTime(timezone=True), nullable=True)
+    
+    # Admin response & oversight
+    admin_reply = Column(Text, nullable=True)
+    admin_replied_at = Column(DateTime(timezone=True), nullable=True)
+    
     worker = relationship("WorkerProfile", back_populates="complaints")

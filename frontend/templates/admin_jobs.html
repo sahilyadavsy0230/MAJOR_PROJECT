@@ -1,5 +1,5 @@
-{% extends "dashboard_base.html" %}
-{% block title %}Jobs & Applications – Admin{% endblock %}
+﻿{% extends "dashboard_base.html" %}
+{% block title %}Jobs & Applications â€“ Admin{% endblock %}
 
 {% block sidebar %}
   <div class="sidebar-label">Main</div>
@@ -11,6 +11,7 @@
   <a href="/dashboard/admin/workers" class="sidebar-link"><i class="bi bi-person-badge"></i> Workers</a>
   <div class="sidebar-label">Management</div>
   <a href="/dashboard/admin/supervisors" class="sidebar-link"><i class="bi bi-person-gear"></i> Supervisors</a>
+  <a href="/dashboard/admin/complaints" class="sidebar-link"><i class="bi bi-chat-left-text"></i> Complaints</a>
 {% endblock %}
 
 {% block content %}
@@ -47,7 +48,7 @@
         </div>
         <div class="col-md-6"><label class="pg-form-label">Location *</label><input name="location" class="pg-input" required></div>
         <div class="col-md-4"><label class="pg-form-label">Vacancies *</label><input name="vacancies" type="number" class="pg-input" required value="10"></div>
-        <div class="col-md-4"><label class="pg-form-label">Salary</label><input name="salary" class="pg-input" placeholder="₹15,000/month"></div>
+        <div class="col-md-4"><label class="pg-form-label">Salary</label><input name="salary" class="pg-input" placeholder="â‚¹15,000/month"></div>
         <div class="col-md-4"><label class="pg-form-label">Shift</label>
           <select name="shift" class="pg-input"><option>Day</option><option>Night</option><option>Rotational</option><option>Any</option></select>
         </div>
@@ -86,7 +87,7 @@ async function loadJobs() {
           <div style="font-size:13px;font-weight:700;color:var(--coral);">
             <i class="bi bi-people"></i> ${j.application_count} Application${j.application_count !== 1 ? 's' : ''}
           </div>
-          <span style="font-size:12px;color:var(--ink-60);">Click to view →</span>
+          <span style="font-size:12px;color:var(--ink-60);">Click to view â†’</span>
         </div>
       </div>
     </div>

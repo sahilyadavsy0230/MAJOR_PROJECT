@@ -932,7 +932,15 @@ def reject_supervisor(sup_id: int, db: Session = Depends(get_db), admin=Depends(
 # ─── ALL CANDIDATES VIEW ──────────────────────────────────────────────────────
 @router.get("/candidates")
 def list_candidates(db: Session = Depends(get_db), admin=Depends(require_admin)):
-    candidates = db.query(CandidateProfile).all()
+    # Show ONLY candidates who are not workers
+    worker_user_ids = db.query(WorkerProfile.user_id).filter(WorkerProfile.user_id.isnot(None))
+    candidates = (
+        db.query(CandidateProfile)
+        .join(User, CandidateProfile.user_id == User.id)
+        .filter(User.role == UserRole.CANDIDATE)
+        .filter(~CandidateProfile.user_id.in_(worker_user_ids))
+        .all()
+    )
     result = []
     for cp in candidates:
         latest_app = db.query(JobApplication).filter(
@@ -943,15 +951,15 @@ def list_candidates(db: Session = Depends(get_db), admin=Depends(require_admin))
             "id": cp.id,
             "full_name": cp.full_name,
             "phone": cp.phone,
-            "email": cp.user.email,
+            "email": cp.user.email if cp.user else "",
             "city": cp.city,
             "qualification": cp.qualification,
             "profile_photo": cp.profile_photo,
-            "role": cp.user.role,
+            "role": cp.user.role if cp.user else "CANDIDATE",
             "latest_application": {
                 "id": latest_app.id,
                 "status": latest_app.status,
-                "job": latest_app.job.title,
+                "job": latest_app.job.title if latest_app.job else "",
             } if latest_app else None,
         })
     return result
@@ -981,6 +989,8 @@ def list_workers(db: Session = Depends(get_db), admin=Depends(require_admin)):
             "full_name": cp.full_name if cp else "—",
             "phone": cp.phone if cp else "—",
             "email": cp.user.email if (cp and cp.user) else "—",
+            "profile_photo": cp.profile_photo if cp else None,
+            "city": cp.city if cp else (dep.area or "—"),
             "company": dep.company or "—",
             "job_role": dep.job_role or "—",
             "joining_date": str(dep.joining_date) if dep.joining_date else None,
@@ -1006,6 +1016,8 @@ def list_workers(db: Session = Depends(get_db), admin=Depends(require_admin)):
             "full_name": cp.full_name if cp else "—",
             "phone": cp.phone if cp else "—",
             "email": cp.user.email if (cp and cp.user) else "—",
+            "profile_photo": cp.profile_photo if cp else None,
+            "city": cp.city if cp else (dep.area if dep else "—"),
             "company": dep.company if dep else "—",
             "job_role": dep.job_role if dep else "—",
             "joining_date": str(dep.joining_date) if dep else None,
@@ -1228,6 +1240,59 @@ def get_attendance(worker_id: int, db: Session = Depends(get_db), admin=Depends(
         "total_days": len(records),
         "records": att_list,
     }
+
+
+# ─── WORKER COMPLAINTS OVERSIGHT (ADMIN) ─────────────────────────────────────
+@router.get("/complaints")
+def list_all_complaints(db: Session = Depends(get_db), admin=Depends(require_admin)):
+    complaints = db.query(Complaint).order_by(Complaint.created_at.desc()).all()
+    result = []
+    for c in complaints:
+        wp = c.worker
+        dep = wp.deployment if wp else None
+        cp = dep.application.candidate if (dep and dep.application) else (wp.user.candidate_profile if (wp and wp.user) else None)
+        sup = dep.supervisor if dep else None
+        
+        result.append({
+            "id": c.id,
+            "worker_id": wp.id if wp else None,
+            "worker_id_str": dep.worker_id_str if dep else (f"PGW-{wp.id}" if wp else "—"),
+            "worker_name": cp.full_name if cp else "Worker",
+            "worker_phone": cp.phone if cp else "—",
+            "company": dep.company if dep else "—",
+            "area": dep.area if dep else "—",
+            "supervisor_id": sup.id if sup else None,
+            "supervisor_name": sup.name if sup else "Not Assigned",
+            "title": c.title,
+            "description": c.description,
+            "status": c.status,
+            "created_at": c.created_at.isoformat() if c.created_at else None,
+            "supervisor_reply": c.supervisor_reply,
+            "supervisor_action": c.supervisor_action,
+            "supervisor_replied_at": c.supervisor_replied_at.isoformat() if c.supervisor_replied_at else None,
+            "admin_reply": c.admin_reply,
+            "admin_replied_at": c.admin_replied_at.isoformat() if c.admin_replied_at else None,
+        })
+    return result
+
+
+@router.post("/complaints/{complaint_id}/reply")
+def reply_complaint_admin(
+    complaint_id: int,
+    reply: str = Form(...),
+    new_status: Optional[str] = Form("RESOLVED"),
+    db: Session = Depends(get_db),
+    admin=Depends(require_admin)
+):
+    c = db.query(Complaint).filter(Complaint.id == complaint_id).first()
+    if not c:
+        raise HTTPException(status_code=404, detail="Complaint not found")
+    c.admin_reply = reply.strip()
+    c.admin_replied_at = datetime.utcnow()
+    if new_status and new_status.strip():
+        c.status = new_status.strip().upper()
+    db.commit()
+    return {"message": "Admin reply saved successfully", "status": c.status}
 
 
 

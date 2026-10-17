@@ -1,5 +1,5 @@
-{% extends "dashboard_base.html" %}
-{% block title %}Application Detail – Prashant Group{% endblock %}
+﻿{% extends "dashboard_base.html" %}
+{% block title %}Application Detail â€“ Prashant Group{% endblock %}
 
 {% block sidebar %}
   <div class="sidebar-label">Main</div>
@@ -11,6 +11,7 @@
   <a href="/dashboard/admin/workers" class="sidebar-link"><i class="bi bi-person-badge"></i> Workers</a>
   <div class="sidebar-label">Management</div>
   <a href="/dashboard/admin/supervisors" class="sidebar-link"><i class="bi bi-person-gear"></i> Supervisors</a>
+  <a href="/dashboard/admin/complaints" class="sidebar-link"><i class="bi bi-chat-left-text"></i> Complaints</a>
 {% endblock %}
 
 {% block content %}
@@ -36,22 +37,22 @@
       </div>
       <div style="border-top:1px solid var(--ink-05);padding:1.25rem 1.75rem;font-size:13px;">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
-          <div><span style="color:var(--ink-60);display:block;font-size:11px;font-weight:700;text-transform:uppercase;">DOB</span><span id="candDob">—</span></div>
-          <div><span style="color:var(--ink-60);display:block;font-size:11px;font-weight:700;text-transform:uppercase;">Age / Gender</span><span id="candAge">—</span> / <span id="candGender">—</span></div>
-          <div><span style="color:var(--ink-60);display:block;font-size:11px;font-weight:700;text-transform:uppercase;">City</span><span id="candCity">—</span></div>
-          <div><span style="color:var(--ink-60);display:block;font-size:11px;font-weight:700;text-transform:uppercase;">State / PIN</span><span id="candState">—</span> <span id="candPin"></span></div>
-          <div style="grid-column:span 2;"><span style="color:var(--ink-60);display:block;font-size:11px;font-weight:700;text-transform:uppercase;">Address</span><span id="candAddr">—</span></div>
+          <div><span style="color:var(--ink-60);display:block;font-size:11px;font-weight:700;text-transform:uppercase;">DOB</span><span id="candDob">â€”</span></div>
+          <div><span style="color:var(--ink-60);display:block;font-size:11px;font-weight:700;text-transform:uppercase;">Age / Gender</span><span id="candAge">â€”</span> / <span id="candGender">â€”</span></div>
+          <div><span style="color:var(--ink-60);display:block;font-size:11px;font-weight:700;text-transform:uppercase;">City</span><span id="candCity">â€”</span></div>
+          <div><span style="color:var(--ink-60);display:block;font-size:11px;font-weight:700;text-transform:uppercase;">State / PIN</span><span id="candState">â€”</span> <span id="candPin"></span></div>
+          <div style="grid-column:span 2;"><span style="color:var(--ink-60);display:block;font-size:11px;font-weight:700;text-transform:uppercase;">Address</span><span id="candAddr">â€”</span></div>
         </div>
       </div>
       <div style="border-top:1px solid var(--ink-05);padding:1.25rem 1.75rem;font-size:13px;background:var(--off-white);">
         <div style="font-weight:700;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-60);margin-bottom:8px;">Education & Preferences</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
-          <div><span style="color:var(--ink-60);display:block;font-size:11px;font-weight:700;text-transform:uppercase;">Qualification</span><strong id="candQual">—</strong></div>
-          <div><span style="color:var(--ink-60);display:block;font-size:11px;font-weight:700;text-transform:uppercase;">Experience</span><strong id="candExp">—</strong></div>
-          <div><span style="color:var(--ink-60);display:block;font-size:11px;font-weight:700;text-transform:uppercase;">Preferred Role</span><strong id="candPJob">—</strong></div>
-          <div><span style="color:var(--ink-60);display:block;font-size:11px;font-weight:700;text-transform:uppercase;">Exp. Salary</span><strong id="candSal">—</strong></div>
-          <div><span style="color:var(--ink-60);display:block;font-size:11px;font-weight:700;text-transform:uppercase;">Shift</span><strong id="candShift">—</strong></div>
-          <div><span style="color:var(--ink-60);display:block;font-size:11px;font-weight:700;text-transform:uppercase;">Source</span><strong id="candSource">—</strong></div>
+          <div><span style="color:var(--ink-60);display:block;font-size:11px;font-weight:700;text-transform:uppercase;">Qualification</span><strong id="candQual">â€”</strong></div>
+          <div><span style="color:var(--ink-60);display:block;font-size:11px;font-weight:700;text-transform:uppercase;">Experience</span><strong id="candExp">â€”</strong></div>
+          <div><span style="color:var(--ink-60);display:block;font-size:11px;font-weight:700;text-transform:uppercase;">Preferred Role</span><strong id="candPJob">â€”</strong></div>
+          <div><span style="color:var(--ink-60);display:block;font-size:11px;font-weight:700;text-transform:uppercase;">Exp. Salary</span><strong id="candSal">â€”</strong></div>
+          <div><span style="color:var(--ink-60);display:block;font-size:11px;font-weight:700;text-transform:uppercase;">Shift</span><strong id="candShift">â€”</strong></div>
+          <div><span style="color:var(--ink-60);display:block;font-size:11px;font-weight:700;text-transform:uppercase;">Source</span><strong id="candSource">â€”</strong></div>
         </div>
       </div>
     </div>
@@ -94,7 +95,7 @@
       </div>
       <div class="content-card-body" id="interviewInfo"></div>
 
-      <!-- POST-INTERVIEW RESULT PANEL — visible only when status is INTERVIEW -->
+      <!-- POST-INTERVIEW RESULT PANEL â€” visible only when status is INTERVIEW -->
       <div id="postInterviewResultPanel" class="d-none" style="border-top:2px dashed var(--coral);padding:1.25rem 1.75rem;background:linear-gradient(135deg,rgba(239,70,35,0.03),rgba(22,163,74,0.03));">
         <div style="font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-60);margin-bottom:12px;">
           <i class="bi bi-clipboard2-check me-1 text-coral"></i> Record Interview Result
@@ -247,19 +248,19 @@ async function loadApplication() {
   document.getElementById('candName').textContent    = c.full_name;
   document.getElementById('candEmail').textContent   = c.email;
   document.getElementById('candPhone').textContent   = c.phone;
-  document.getElementById('candDob').textContent     = c.dob || '—';
-  document.getElementById('candAge').textContent     = c.age || '—';
-  document.getElementById('candGender').textContent  = c.gender || '—';
-  document.getElementById('candCity').textContent    = c.city || '—';
-  document.getElementById('candState').textContent   = c.state || '—';
-  document.getElementById('candPin').textContent     = c.pin_code || '—';
-  document.getElementById('candAddr').textContent    = c.current_address || '—';
-  document.getElementById('candQual').textContent    = c.qualification || '—';
-  document.getElementById('candExp').textContent     = c.experience || '—';
-  document.getElementById('candPJob').textContent    = c.preferred_job || '—';
-  document.getElementById('candSal').textContent     = c.expected_salary || '—';
-  document.getElementById('candShift').textContent   = c.preferred_shift || '—';
-  document.getElementById('candSource').textContent  = c.source || '—';
+  document.getElementById('candDob').textContent     = c.dob || 'â€”';
+  document.getElementById('candAge').textContent     = c.age || 'â€”';
+  document.getElementById('candGender').textContent  = c.gender || 'â€”';
+  document.getElementById('candCity').textContent    = c.city || 'â€”';
+  document.getElementById('candState').textContent   = c.state || 'â€”';
+  document.getElementById('candPin').textContent     = c.pin_code || 'â€”';
+  document.getElementById('candAddr').textContent    = c.current_address || 'â€”';
+  document.getElementById('candQual').textContent    = c.qualification || 'â€”';
+  document.getElementById('candExp').textContent     = c.experience || 'â€”';
+  document.getElementById('candPJob').textContent    = c.preferred_job || 'â€”';
+  document.getElementById('candSal').textContent     = c.expected_salary || 'â€”';
+  document.getElementById('candShift').textContent   = c.preferred_shift || 'â€”';
+  document.getElementById('candSource').textContent  = c.source || 'â€”';
 
   // Default client in interview modal
   document.getElementById('interviewClientInput').value = job.company;
@@ -276,7 +277,7 @@ async function loadApplication() {
       <strong>${job.title}</strong>
       <span style="color:var(--ink-60);font-size:14px;">@ ${job.company}</span>
     </div>
-    <p style="margin:0.5rem 0 0;font-size:13px;color:var(--ink-60);">Applied: ${app.applied_date ? app.applied_date.split('T')[0] : '—'}</p>
+    <p style="margin:0.5rem 0 0;font-size:13px;color:var(--ink-60);">Applied: ${app.applied_date ? app.applied_date.split('T')[0] : 'â€”'}</p>
   `;
 
   // Documents
@@ -376,7 +377,7 @@ function renderActions(status) {
   panel.innerHTML = actions.length ? actions.join('') : '<p style="color:var(--ink-60);font-size:14px;">No actions available.</p>';
 }
 
-// ── PDF download with auth token (fixes "Not authenticated" error) ─────────
+// â”€â”€ PDF download with auth token (fixes "Not authenticated" error) â”€â”€â”€â”€â”€â”€â”€â”€â”€
 async function downloadPdf(url, filename) {
   const token = localStorage.getItem('token');
   if (!token) { alert('Please log in again.'); return; }
@@ -397,7 +398,7 @@ async function downloadPdf(url, filename) {
   } catch(e) { alert('Download failed: ' + e.message); }
 }
 
-// ── Call letter download (interview) ────────────────────────────────────────
+// â”€â”€ Call letter download (interview) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 async function downloadCallLetter() {
   await downloadPdf(
     `/api/v1/admin/applications/${appId}/interview-letter/pdf`,
@@ -405,7 +406,7 @@ async function downloadCallLetter() {
   );
 }
 
-// ── Rejection with reason ────────────────────────────────────────────────────
+// â”€â”€ Rejection with reason â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function openRejectModal() {
   document.getElementById('rejectModal').style.display = 'flex';
 }
@@ -424,7 +425,7 @@ async function submitRejection() {
   btn.innerHTML = '<i class="bi bi-x-circle"></i> Send Rejection';
   if (res) {
     document.getElementById('rejectModal').style.display = 'none';
-    alert('✅ Application rejected and formal rejection email dispatched to candidate.');
+    alert('âœ… Application rejected and formal rejection email dispatched to candidate.');
     loadApplication();
   }
 }
@@ -469,7 +470,7 @@ document.getElementById('interviewForm').addEventListener('submit', async (e) =>
 
   if (res) {
     document.getElementById('interviewModal').style.display = 'none';
-    alert('✅ ' + (res.message || 'Interview scheduled! Email dispatched.'));
+    alert('âœ… ' + (res.message || 'Interview scheduled! Email dispatched.'));
     loadApplication();
   }
 });

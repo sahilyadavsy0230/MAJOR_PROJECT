@@ -1,7 +1,7 @@
 """Worker dashboard — STRICTLY WORKER role only."""
 from fastapi import APIRouter, Depends, HTTPException, Form
 from sqlalchemy.orm import Session
-from datetime import date as ddate
+from datetime import date as ddate, datetime
 from backend.app.database.session import get_db
 from backend.app.models.user import User, UserRole
 from backend.app.models.worker import WorkerProfile, Attendance, Complaint
@@ -42,9 +42,19 @@ def worker_dashboard(db: Session = Depends(get_db), worker: User = Depends(requi
         for a in sorted(profile.attendances, key=lambda x: x.date, reverse=True)[:30]
     ]
     complaints = [
-        {"id": c.id, "title": c.title, "status": c.status,
-         "created_at": c.created_at.isoformat() if c.created_at else None}
-        for c in profile.complaints
+        {
+            "id": c.id,
+            "title": c.title,
+            "description": c.description,
+            "status": c.status,
+            "created_at": c.created_at.isoformat() if c.created_at else None,
+            "supervisor_reply": c.supervisor_reply,
+            "supervisor_action": c.supervisor_action,
+            "supervisor_replied_at": c.supervisor_replied_at.isoformat() if c.supervisor_replied_at else None,
+            "admin_reply": c.admin_reply,
+            "admin_replied_at": c.admin_replied_at.isoformat() if c.admin_replied_at else None,
+        }
+        for c in sorted(profile.complaints, key=lambda x: (x.created_at or datetime.min), reverse=True)
     ]
 
     return {

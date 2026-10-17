@@ -1,5 +1,5 @@
-{% extends "dashboard_base.html" %}
-{% block title %}Live Field Supervisor GPS Tracker – Prashant Group Admin{% endblock %}
+﻿{% extends "dashboard_base.html" %}
+{% block title %}Live Field Supervisor GPS Tracker â€“ Prashant Group Admin{% endblock %}
 
 {% block extra_css %}
 <!-- Leaflet CSS -->
@@ -79,6 +79,7 @@
   <a href="/dashboard/admin/workers" class="sidebar-link"><i class="bi bi-person-badge"></i> Workers</a>
   <div class="sidebar-label">Management</div>
   <a href="/dashboard/admin/supervisors" class="sidebar-link active"><i class="bi bi-person-gear"></i> Supervisors</a>
+  <a href="/dashboard/admin/complaints" class="sidebar-link"><i class="bi bi-chat-left-text"></i> Complaints</a>
 {% endblock %}
 
 {% block content %}
@@ -220,7 +221,7 @@ function renderMarkers() {
       bounds.push([lat, lng]);
 
       const statusColor = s.is_online ? '#16A34A' : (s.minutes_ago !== null && s.minutes_ago <= 30 ? '#D97706' : '#EF4623');
-      const statusText = s.is_online ? '🟢 Live Active' : (s.minutes_ago !== null ? `🟡 Active ${s.minutes_ago}m ago` : '🔴 Offline / Site GPS');
+      const statusText = s.is_online ? 'ðŸŸ¢ Live Active' : (s.minutes_ago !== null ? `ðŸŸ¡ Active ${s.minutes_ago}m ago` : 'ðŸ”´ Offline / Site GPS');
 
       const customIcon = L.divIcon({
         className: 'custom-sup-marker',

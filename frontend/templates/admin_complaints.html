@@ -1,0 +1,313 @@
+﻿{% extends "dashboard_base.html" %}
+{% block title %}Worker Complaints – Admin{% endblock %}
+
+{% block sidebar %}
+  <div class="sidebar-label">Main</div>
+  <a href="/dashboard/admin" class="sidebar-link"><i class="bi bi-speedometer2"></i> Overview</a>
+  <a href="/dashboard/admin/analytics" class="sidebar-link"><i class="bi bi-bar-chart-fill"></i> Analytics</a>
+  <div class="sidebar-label">Recruitment</div>
+  <a href="/dashboard/admin/jobs" class="sidebar-link"><i class="bi bi-briefcase"></i> Jobs &amp; Applications</a>
+  <a href="/dashboard/admin/candidates" class="sidebar-link"><i class="bi bi-people"></i> Candidates</a>
+  <a href="/dashboard/admin/workers" class="sidebar-link"><i class="bi bi-person-badge"></i> Workers</a>
+  <div class="sidebar-label">Management</div>
+  <a href="/dashboard/admin/supervisors" class="sidebar-link"><i class="bi bi-person-gear"></i> Supervisors</a>
+  <a href="/dashboard/admin/complaints" class="sidebar-link active"><i class="bi bi-chat-left-text"></i> Complaints</a>
+{% endblock %}
+
+{% block content %}
+<div class="dash-header">
+  <div>
+    <h1 class="dash-title">Worker Complaints</h1>
+    <p style="margin:4px 0 0;color:var(--ink-60);font-size:13px;">
+      All complaints filed by workers. Reply, update status, and track supervisor actions.
+    </p>
+  </div>
+  <div class="d-flex gap-2 align-items-center">
+    <select id="filterStatus" class="pg-input" style="padding:8px 12px;font-size:13px;width:160px;" onchange="loadComplaints()">
+      <option value="">All Status</option>
+      <option value="OPEN">Open</option>
+      <option value="IN_PROGRESS">In Progress</option>
+      <option value="RESOLVED">Resolved</option>
+      <option value="CLOSED">Closed</option>
+    </select>
+    <input type="text" id="searchInput" class="pg-input" placeholder="Search worker, company..." style="width:240px;padding:8px 14px;font-size:13px;" oninput="filterComplaints()">
+  </div>
+</div>
+
+<!-- Stats Row -->
+<div id="complaintsStats" class="row g-3 mb-4"></div>
+
+<!-- Complaints List -->
+<div id="complaintsList" style="display:flex;flex-direction:column;gap:1rem;">
+  <div class="content-card" style="text-align:center;padding:3rem;color:var(--ink-60);">
+    <div class="spinner-border text-coral" role="status" style="width:2rem;height:2rem;"></div>
+    <p class="mt-3">Loading complaints...</p>
+  </div>
+</div>
+
+<!-- Reply Modal -->
+<div id="replyModal" style="display:none;position:fixed;inset:0;background:rgba(45,59,66,0.6);backdrop-filter:blur(4px);z-index:9999;align-items:center;justify-content:center;padding:1.5rem;">
+  <div style="background:#fff;border-radius:var(--radius-lg);padding:2.25rem;max-width:600px;width:100%;max-height:90vh;overflow-y:auto;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.25rem;">
+      <div>
+        <h4 style="margin:0;font-family:var(--font-serif);font-size:1.5rem;"><i class="bi bi-reply-fill text-coral me-2"></i> Reply to Complaint</h4>
+        <p id="replyComplaintTitle" style="margin:4px 0 0;font-size:13px;color:var(--ink-60);"></p>
+      </div>
+      <button onclick="closeReplyModal()" style="background:none;border:none;font-size:1.5rem;cursor:pointer;">&times;</button>
+    </div>
+
+    <!-- Complaint Details -->
+    <div id="replyComplaintDetails" style="background:var(--ink-02);border:1px solid var(--ink-05);border-radius:var(--radius-sm);padding:1rem;margin-bottom:1rem;font-size:13px;"></div>
+
+    <!-- Supervisor Action Status -->
+    <div id="replySupAction" style="display:none;background:#EBF8F2;border:1px solid rgba(22,163,74,0.2);border-radius:var(--radius-sm);padding:0.85rem;margin-bottom:1rem;font-size:13px;"></div>
+
+    <!-- Admin Reply Form -->
+    <form id="replyForm">
+      <input type="hidden" id="replyComplaintId">
+      <div class="mb-3">
+        <label class="pg-form-label">Admin Reply / Response *</label>
+        <textarea id="replyText" class="pg-input" rows="4" placeholder="Write your response or action taken..." required style="resize:vertical;"></textarea>
+      </div>
+      <div class="mb-3">
+        <label class="pg-form-label">Update Status</label>
+        <select id="replyStatus" class="pg-input">
+          <option value="OPEN">Open – Needs attention</option>
+          <option value="IN_PROGRESS">In Progress – Being handled</option>
+          <option value="RESOLVED">Resolved – Issue resolved</option>
+          <option value="CLOSED">Closed – No further action</option>
+        </select>
+      </div>
+      <div class="d-flex gap-2">
+        <button type="button" onclick="closeReplyModal()" class="btn-secondary" style="flex:1;justify-content:center;">Cancel</button>
+        <button type="submit" id="btnSendReply" class="btn-primary" style="flex:1;justify-content:center;"><i class="bi bi-send"></i> Send Reply</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<style>
+.complaint-card {
+  background: #fff;
+  border: 1px solid var(--ink-05);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition: box-shadow 0.2s;
+}
+.complaint-card:hover { box-shadow: 0 4px 24px rgba(0,0,0,0.07); }
+.complaint-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 1.1rem 1.5rem;
+  border-bottom: 1px solid var(--ink-05);
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+.complaint-card-body { padding: 1.1rem 1.5rem; }
+.complaint-badge-open { background:#FEF3C7;color:#D97706;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700; }
+.complaint-badge-in_progress { background:#EFF6FF;color:#2563EB;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700; }
+.complaint-badge-resolved { background:#EBF8F2;color:#16A34A;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700; }
+.complaint-badge-closed { background:#F3F4F6;color:#6B7280;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700; }
+.reply-box {
+  border-radius: var(--radius-sm);
+  padding: 0.75rem 1rem;
+  font-size: 13px;
+  margin-top: 0.75rem;
+}
+.reply-box.supervisor { background:#EFF6FF;border:1px solid rgba(37,99,235,0.15); }
+.reply-box.admin { background:#EBF8F2;border:1px solid rgba(22,163,74,0.15); }
+.reply-box.pending { background:#FEF3C7;border:1px solid rgba(217,119,6,0.2); }
+.sup-action-badge { display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px; }
+.sup-action-taken { background:rgba(22,163,74,0.1);color:#16A34A; }
+.sup-action-pending { background:rgba(220,38,38,0.1);color:#DC2626; }
+</style>
+<script>
+let allComplaints = [];
+
+async function loadComplaints() {
+  const res = await apiGet('/api/v1/admin/complaints');
+  if (!res) return;
+  allComplaints = res;
+  renderStats(res);
+  filterComplaints();
+}
+
+function renderStats(complaints) {
+  const open = complaints.filter(c => c.status === 'OPEN').length;
+  const inProg = complaints.filter(c => c.status === 'IN_PROGRESS').length;
+  const resolved = complaints.filter(c => c.status === 'RESOLVED').length;
+  const noSupAction = complaints.filter(c => !c.supervisor_action && c.status !== 'RESOLVED' && c.status !== 'CLOSED').length;
+
+  document.getElementById('complaintsStats').innerHTML = `
+    <div class="col-3"><div class="content-card" style="padding:0.9rem;text-align:center;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--ink-60);">Open</div>
+      <div style="font-size:1.6rem;font-weight:800;color:#D97706;">${open}</div>
+    </div></div>
+    <div class="col-3"><div class="content-card" style="padding:0.9rem;text-align:center;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--ink-60);">In Progress</div>
+      <div style="font-size:1.6rem;font-weight:800;color:#2563EB;">${inProg}</div>
+    </div></div>
+    <div class="col-3"><div class="content-card" style="padding:0.9rem;text-align:center;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#16A34A;">Resolved</div>
+      <div style="font-size:1.6rem;font-weight:800;color:#16A34A;">${resolved}</div>
+    </div></div>
+    <div class="col-3"><div class="content-card" style="padding:0.9rem;text-align:center;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#DC2626;">Sup. Pending</div>
+      <div style="font-size:1.6rem;font-weight:800;color:#DC2626;">${noSupAction}</div>
+    </div></div>`;
+}
+
+function filterComplaints() {
+  const q = (document.getElementById('searchInput').value || '').toLowerCase();
+  const st = (document.getElementById('filterStatus').value || '').toUpperCase();
+  let filtered = allComplaints;
+  if (st) filtered = filtered.filter(c => c.status === st);
+  if (q) filtered = filtered.filter(c =>
+    (c.worker_name||'').toLowerCase().includes(q) ||
+    (c.company||'').toLowerCase().includes(q) ||
+    (c.title||'').toLowerCase().includes(q) ||
+    (c.worker_id_str||'').toLowerCase().includes(q)
+  );
+  renderComplaints(filtered);
+}
+
+function renderComplaints(complaints) {
+  const list = document.getElementById('complaintsList');
+  if (!complaints.length) {
+    list.innerHTML = '<div class="content-card" style="text-align:center;padding:3rem;color:var(--ink-60);"><i class="bi bi-chat-left-text" style="font-size:2rem;"></i><p class="mt-2">No complaints found.</p></div>';
+    return;
+  }
+  list.innerHTML = complaints.map(c => renderComplaintCard(c)).join('');
+}
+
+function renderComplaintCard(c) {
+  const statusBadge = `<span class="complaint-badge-${c.status.toLowerCase()}">${c.status.replace('_',' ')}</span>`;
+  const dateStr = c.created_at ? new Date(c.created_at).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : '—';
+
+  const supActionHtml = c.supervisor_action
+    ? `<span class="sup-action-badge sup-action-taken"><i class="bi bi-check-circle-fill"></i> Supervisor Acted</span>`
+    : `<span class="sup-action-badge sup-action-pending"><i class="bi bi-exclamation-circle-fill"></i> Awaiting Supervisor</span>`;
+
+  const supReplyHtml = c.supervisor_reply
+    ? `<div class="reply-box supervisor">
+        <div style="font-size:11px;font-weight:700;color:#2563EB;text-transform:uppercase;margin-bottom:4px;">
+          <i class="bi bi-person-gear me-1"></i> Supervisor Reply
+          ${c.supervisor_action ? `&nbsp;·&nbsp;<span style="color:#16A34A;">Action: ${escapeHtml(c.supervisor_action)}</span>` : ''}
+          ${c.supervisor_replied_at ? `&nbsp;·&nbsp;<span style="color:var(--ink-60);">${new Date(c.supervisor_replied_at).toLocaleDateString('en-IN')}</span>` : ''}
+        </div>
+        <div>${escapeHtml(c.supervisor_reply)}</div>
+      </div>`
+    : `<div class="reply-box pending"><i class="bi bi-hourglass-split me-1" style="color:#D97706;"></i> <span style="color:#D97706;font-weight:600;">No supervisor reply yet</span></div>`;
+
+  const adminReplyHtml = c.admin_reply
+    ? `<div class="reply-box admin">
+        <div style="font-size:11px;font-weight:700;color:#16A34A;text-transform:uppercase;margin-bottom:4px;">
+          <i class="bi bi-shield-check me-1"></i> Admin Reply
+          ${c.admin_replied_at ? `&nbsp;·&nbsp;<span style="color:var(--ink-60);">${new Date(c.admin_replied_at).toLocaleDateString('en-IN')}</span>` : ''}
+        </div>
+        <div>${escapeHtml(c.admin_reply)}</div>
+      </div>`
+    : '';
+
+  return `
+    <div class="complaint-card">
+      <div class="complaint-card-header">
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+            <strong style="font-size:1rem;">${escapeHtml(c.title)}</strong>
+            ${statusBadge}
+            ${supActionHtml}
+          </div>
+          <div style="font-size:12px;color:var(--ink-60);margin-top:4px;">
+            <i class="bi bi-person me-1"></i> ${escapeHtml(c.worker_name)} &nbsp;·&nbsp;
+            <code style="font-size:11px;">${escapeHtml(c.worker_id_str)}</code> &nbsp;·&nbsp;
+            <i class="bi bi-buildings me-1"></i> ${escapeHtml(c.company||'—')} &nbsp;·&nbsp;
+            <i class="bi bi-geo-alt me-1"></i> ${escapeHtml(c.area||'—')} &nbsp;·&nbsp;
+            <i class="bi bi-calendar3 me-1"></i> ${dateStr}
+          </div>
+          <div style="font-size:12px;color:var(--ink-60);margin-top:2px;">
+            <i class="bi bi-person-gear me-1"></i> Supervisor: <strong>${escapeHtml(c.supervisor_name||'Not Assigned')}</strong>
+          </div>
+        </div>
+        <div class="d-flex gap-2 align-items-center">
+          <button class="btn-primary" onclick="openReplyModal(${JSON.stringify(c).replace(/"/g,'&quot;')})" style="padding:6px 14px;font-size:12px;">
+            <i class="bi bi-reply-fill me-1"></i> ${c.admin_reply ? 'Update Reply' : 'Reply'}
+          </button>
+        </div>
+      </div>
+      <div class="complaint-card-body">
+        <div style="font-size:13px;color:var(--ink);line-height:1.6;margin-bottom:0.75rem;">${escapeHtml(c.description)}</div>
+        ${supReplyHtml}
+        ${adminReplyHtml}
+      </div>
+    </div>`;
+}
+
+function openReplyModal(c) {
+  if (typeof c === 'string') c = JSON.parse(c);
+  document.getElementById('replyComplaintId').value = c.id;
+  document.getElementById('replyComplaintTitle').textContent = c.title;
+  document.getElementById('replyText').value = c.admin_reply || '';
+  document.getElementById('replyStatus').value = c.status || 'OPEN';
+
+  document.getElementById('replyComplaintDetails').innerHTML = `
+    <div style="font-weight:700;margin-bottom:6px;">${escapeHtml(c.title)}</div>
+    <div style="color:var(--ink-60);">${escapeHtml(c.description)}</div>
+    <div style="margin-top:8px;font-size:12px;">
+      Worker: <strong>${escapeHtml(c.worker_name)}</strong> &nbsp;·&nbsp;
+      Company: <strong>${escapeHtml(c.company||'—')}</strong> &nbsp;·&nbsp;
+      Phone: ${escapeHtml(c.worker_phone||'—')}
+    </div>`;
+
+  const supDiv = document.getElementById('replySupAction');
+  if (c.supervisor_action || c.supervisor_reply) {
+    supDiv.style.display = 'block';
+    supDiv.innerHTML = `<div style="font-size:11px;font-weight:700;color:#16A34A;text-transform:uppercase;margin-bottom:4px;">
+      <i class="bi bi-person-gear me-1"></i> Supervisor Action
+    </div>
+    ${c.supervisor_action ? `<div><strong>Action taken:</strong> ${escapeHtml(c.supervisor_action)}</div>` : ''}
+    ${c.supervisor_reply ? `<div style="margin-top:4px;color:var(--ink-60);">${escapeHtml(c.supervisor_reply)}</div>` : ''}`;
+  } else {
+    supDiv.style.display = 'none';
+  }
+
+  document.getElementById('replyModal').style.display = 'flex';
+}
+
+function closeReplyModal() {
+  document.getElementById('replyModal').style.display = 'none';
+}
+
+document.getElementById('replyForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById('btnSendReply');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Sending...';
+
+  const cid = document.getElementById('replyComplaintId').value;
+  const fd = new FormData();
+  fd.append('reply', document.getElementById('replyText').value.trim());
+  fd.append('new_status', document.getElementById('replyStatus').value);
+
+  const res = await apiPost(`/api/v1/admin/complaints/${cid}/reply`, fd);
+  btn.disabled = false;
+  btn.innerHTML = '<i class="bi bi-send"></i> Send Reply';
+
+  if (res) {
+    closeReplyModal();
+    alert('✅ Reply saved! Status updated to: ' + res.status);
+    loadComplaints();
+  }
+});
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return str.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+loadComplaints();
+</script>
+{% endblock %}

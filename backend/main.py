@@ -107,6 +107,10 @@ async def admin_candidates(request: Request):
 async def admin_workers(request: Request):
     return templates.TemplateResponse(request=request, name="admin_workers.html")
 
+@app.get("/dashboard/admin/complaints")
+async def admin_complaints(request: Request):
+    return templates.TemplateResponse(request=request, name="admin_complaints.html")
+
 @app.get("/dashboard/admin/analytics")
 async def admin_analytics(request: Request):
     return templates.TemplateResponse(request=request, name="admin_analytics.html")

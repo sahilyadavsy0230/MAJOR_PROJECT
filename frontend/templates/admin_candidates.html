@@ -1,5 +1,5 @@
-{% extends "dashboard_base.html" %}
-{% block title %}Candidates – Admin{% endblock %}
+﻿{% extends "dashboard_base.html" %}
+{% block title %}Candidates â€“ Admin{% endblock %}
 
 {% block sidebar %}
   <div class="sidebar-label">Main</div>
@@ -11,6 +11,7 @@
   <a href="/dashboard/admin/workers" class="sidebar-link"><i class="bi bi-person-badge"></i> Workers</a>
   <div class="sidebar-label">Management</div>
   <a href="/dashboard/admin/supervisors" class="sidebar-link"><i class="bi bi-person-gear"></i> Supervisors</a>
+  <a href="/dashboard/admin/complaints" class="sidebar-link"><i class="bi bi-chat-left-text"></i> Complaints</a>
 {% endblock %}
 
 {% block content %}
@@ -52,8 +53,8 @@ function renderCandidates(candidates) {
           </div>
         </div>
         <div style="width:100%;font-size:12px;color:var(--ink-60);">
-          <i class="bi bi-geo-alt me-1"></i>${c.city || '—'} &nbsp;·&nbsp;
-          <i class="bi bi-mortarboard me-1"></i>${c.qualification || '—'}
+          <i class="bi bi-geo-alt me-1"></i>${c.city || 'â€”'} &nbsp;Â·&nbsp;
+          <i class="bi bi-mortarboard me-1"></i>${c.qualification || 'â€”'}
         </div>
         ${c.latest_application ? `
         <div style="width:100%;padding-top:0.75rem;border-top:1px solid var(--ink-05);">
@@ -62,7 +63,7 @@ function renderCandidates(candidates) {
             <span style="font-size:13px;font-weight:600;">${c.latest_application.job}</span>
             <span class="status-pill status-${c.latest_application.status.toLowerCase()}">${c.latest_application.status}</span>
           </div>
-          <a href="/dashboard/admin/application/${c.latest_application.id}" style="font-size:12px;color:var(--coral);font-weight:600;margin-top:4px;display:inline-block;">View Application →</a>
+          <a href="/dashboard/admin/application/${c.latest_application.id}" style="font-size:12px;color:var(--coral);font-weight:600;margin-top:4px;display:inline-block;">View Application â†’</a>
         </div>` : '<p style="font-size:12px;color:var(--ink-60);margin:0;width:100%;padding-top:0.75rem;border-top:1px solid var(--ink-05);">No applications yet.</p>'}
       </div>
     </div>
