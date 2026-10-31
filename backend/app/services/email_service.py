@@ -253,3 +253,64 @@ def send_termination_email(
     """
     return send_email_with_attachment(recipient_email, subject, html_body, pdf_bytes, filename)
 
+
+def send_password_reset_email(
+    to_email: str,
+    recipient_name: str,
+    reset_url: str
+) -> bool:
+    """
+    Dispatches a standardized password reset notification email with a secure,
+    time-limited action link.
+    """
+    subject = "Password Reset Request — Prashant Group Portal"
+
+    html_body = f"""
+    <!DOCTYPE html>
+    <html>
+    <head><meta charset="utf-8"></head>
+    <body style="font-family: 'Segoe UI', Arial, sans-serif; background: #FAFBFC; margin: 0; padding: 24px; color: #2D3B42;">
+      <div style="max-width: 600px; margin: 0 auto; background: #FFFFFF; border-radius: 16px; overflow: hidden; border: 1px solid rgba(45,59,66,0.08); box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
+        <div style="background: #1A365D; padding: 32px 36px; color: #FFFFFF;">
+          <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #EF4623; margin-bottom: 4px;">Security & Account Access</div>
+          <h2 style="margin: 0; font-size: 24px; font-weight: 700; color: #FFFFFF;">Reset Your Password</h2>
+          <p style="margin: 6px 0 0; font-size: 14px; opacity: 0.9;">Prashant Group · Industrial Manpower Solutions</p>
+        </div>
+        <div style="padding: 36px;">
+          <p style="font-size: 15px; margin-top: 0;">Hello <strong>{recipient_name}</strong>,</p>
+          <p style="font-size: 14px; line-height: 1.6; color: #4A5568;">
+            We received a request to reset the password for your Prashant Group account associated with <strong>{to_email}</strong>.
+          </p>
+          
+          <div style="text-align: center; margin: 32px 0;">
+            <a href="{reset_url}" target="_blank" style="background: #EF4623; color: #FFFFFF; padding: 14px 32px; font-size: 15px; font-weight: 700; text-decoration: none; border-radius: 8px; display: inline-block; box-shadow: 0 4px 12px rgba(239,70,35,0.25);">
+              Reset Password
+            </a>
+          </div>
+
+          <div style="background: #FEF3C7; border-left: 4px solid #D97706; padding: 14px 18px; border-radius: 4px; font-size: 13px; color: #92400E; margin-bottom: 24px;">
+            <strong>Important Security Notice:</strong>
+            <ul style="margin: 6px 0 0; padding-left: 18px;">
+              <li>This password reset link is valid for <strong>30 minutes</strong> only.</li>
+              <li>If you did not request a password change, please ignore this email. Your existing password remains secure.</li>
+            </ul>
+          </div>
+
+          <p style="font-size: 13px; color: #718096; line-height: 1.5; margin-bottom: 8px;">
+            If the button above does not work, copy and paste this link into your browser:
+          </p>
+          <p style="font-size: 12px; word-break: break-all; background: #F1F5F9; padding: 10px 14px; border-radius: 6px; color: #2B6CB0; margin-top: 0;">
+            <a href="{reset_url}" style="color: #2B6CB0; text-decoration: underline;">{reset_url}</a>
+          </p>
+
+          <hr style="border: none; border-top: 1px solid #EDF2F7; margin: 24px 0;">
+          <p style="font-size: 13px; color: #718096; margin-bottom: 4px;">Office Support: {settings.COMPANY_PHONE}</p>
+          <p style="font-size: 13px; color: #718096; margin-top: 0;">Email: <a href="mailto:{settings.COMPANY_EMAIL}" style="color: #EF4623;">{settings.COMPANY_EMAIL}</a></p>
+          <p style="font-size: 12px; color: #A0AEC0; margin-top: 16px;">This is an automated message from Prashant Group Workforce Portal. Please do not reply directly to this email.</p>
+        </div>
+      </div>
+    </body>
+    </html>
+    """
+    return send_email_with_attachment(to_email, subject, html_body)
+

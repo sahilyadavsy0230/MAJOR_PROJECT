@@ -28,6 +28,24 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
     return encoded_jwt
 
+def create_password_reset_token(email: str, expires_delta: timedelta | None = None) -> str:
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(minutes=30)
+    to_encode = {"sub": email, "type": "password_reset", "exp": expire}
+    return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+
+def verify_password_reset_token(token: str) -> Optional[str]:
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        if payload.get("type") != "password_reset":
+            return None
+        email: str = payload.get("sub")
+        return email
+    except JWTError:
+        return None
+
 def get_current_user(
     request: Request,
     header_token: Optional[str] = Depends(oauth2_scheme),

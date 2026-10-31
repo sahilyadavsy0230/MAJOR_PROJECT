@@ -76,6 +76,14 @@ async def register_page(request: Request):
 async def supervisor_register_page(request: Request):
     return templates.TemplateResponse(request=request, name="supervisor_register.html")
 
+@app.get("/forgot-password")
+async def forgot_password_page(request: Request):
+    return templates.TemplateResponse(request=request, name="forgot_password.html")
+
+@app.get("/reset-password")
+async def reset_password_page(request: Request, token: str = ""):
+    return templates.TemplateResponse(request=request, name="reset_password.html", context={"token": token})
+
 # ── Authenticated Dashboard Routes ───────────────────────────
 @app.get("/dashboard")
 async def dashboard(request: Request):

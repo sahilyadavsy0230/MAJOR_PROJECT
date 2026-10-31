@@ -2,16 +2,21 @@ import os
 import shutil
 import uuid
 from datetime import timedelta, datetime
-from fastapi import APIRouter, Depends, HTTPException, status, Form, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, status, Form, UploadFile, File, Request, Body
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from typing import Optional
+from pydantic import BaseModel
 from backend.app.database.session import get_db
 from backend.app.models.user import User, UserRole
 from backend.app.models.candidate import CandidateProfile
 from backend.app.models.application import JobApplication
 from backend.app.models.document import Document, DocumentStatus
-from backend.app.security.auth import get_password_hash, verify_password, create_access_token
+from backend.app.security.auth import (
+    get_password_hash, verify_password, create_access_token,
+    create_password_reset_token, verify_password_reset_token
+)
+from backend.app.services.email_service import send_password_reset_email
 from backend.app.config import settings
 
 router = APIRouter()
@@ -254,4 +259,110 @@ def get_me(db: Session = Depends(get_db),
             "profile_photo": cp.profile_photo,
         }
     return data
+
+
+# ── Password Reset Endpoints ─────────────────────────────────
+
+class ForgotPasswordSchema(BaseModel):
+    email: str
+
+class ResetPasswordSchema(BaseModel):
+    token: str
+    new_password: str
+    confirm_password: str
+
+
+@router.post("/forgot-password")
+async def forgot_password(
+    request: Request,
+    payload: ForgotPasswordSchema,
+    db: Session = Depends(get_db)
+):
+    target_email = (payload.email or "").strip().lower()
+    if not target_email or "@" not in target_email:
+        raise HTTPException(status_code=400, detail="Please enter a valid email address.")
+
+    user = db.query(User).filter(User.email.ilike(target_email)).first()
+
+    # Determine base URL for reset link
+    base_url = str(request.base_url).rstrip("/")
+    dev_mode = not getattr(settings, "SMTP_USER", "").strip() or settings.ENVIRONMENT == "development"
+
+    reset_url = None
+    if user and user.is_active:
+        token = create_password_reset_token(user.email, expires_delta=timedelta(minutes=30))
+        reset_url = f"{base_url}/reset-password?token={token}"
+
+        # Resolve friendly name
+        recipient_name = "User"
+        if user.candidate_profile and user.candidate_profile.full_name:
+            recipient_name = user.candidate_profile.full_name
+        elif user.supervisor_profile and user.supervisor_profile.name:
+            recipient_name = user.supervisor_profile.name
+        elif user.worker_profile and user.worker_profile.name:
+            recipient_name = user.worker_profile.name
+        elif user.role == UserRole.ADMIN:
+            recipient_name = "Administrator"
+
+        # Dispatch via SMTP / Email service
+        send_password_reset_email(user.email, recipient_name, reset_url)
+
+    resp_data = {
+        "success": True,
+        "message": "If an account with that email exists, password reset instructions have been sent to your email inbox."
+    }
+
+    # In local dev (no SMTP configured) expose reset URL directly so developer can test instantly
+    if dev_mode and reset_url:
+        resp_data["dev_reset_url"] = reset_url
+
+    return resp_data
+
+
+@router.get("/verify-reset-token")
+def verify_reset_token_endpoint(token: str, db: Session = Depends(get_db)):
+    email = verify_password_reset_token(token)
+    if not email:
+        raise HTTPException(status_code=400, detail="This password reset link is invalid or has expired. Please request a new one.")
+
+    user = db.query(User).filter(User.email == email).first()
+    if not user or not user.is_active:
+        raise HTTPException(status_code=400, detail="User account is inactive or no longer exists.")
+
+    return {"valid": True, "email": email}
+
+
+@router.post("/reset-password")
+async def reset_password(
+    payload: ResetPasswordSchema,
+    db: Session = Depends(get_db)
+):
+    t  = (payload.token or "").strip()
+    p1 = (payload.new_password or "").strip()
+    p2 = (payload.confirm_password or "").strip()
+
+    if not t:
+        raise HTTPException(status_code=400, detail="Missing password reset token.")
+    if not p1 or not p2:
+        raise HTTPException(status_code=400, detail="Please fill in both password fields.")
+    if p1 != p2:
+        raise HTTPException(status_code=400, detail="New password and confirm password do not match.")
+    if len(p1) < 6:
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters long.")
+
+    email = verify_password_reset_token(t)
+    if not email:
+        raise HTTPException(status_code=400, detail="This password reset link has expired or is invalid. Please request a new link.")
+
+    user = db.query(User).filter(User.email == email).first()
+    if not user or not user.is_active:
+        raise HTTPException(status_code=400, detail="User account not found or is inactive.")
+
+    user.hashed_password = get_password_hash(p1)
+    db.commit()
+
+    return {
+        "success": True,
+        "message": "Your password has been reset successfully! You can now sign in with your new password."
+    }
 
