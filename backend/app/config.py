@@ -8,7 +8,9 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "super-secret-key-change-this-in-production"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 120
-    DATABASE_URL: str = "sqlite:///./prashant_group.db"
+    # PostgreSQL (production & dev): postgresql+psycopg2://user:pass@host:port/dbname
+    # SQLite (offline fallback only): sqlite:///./prashant_group.db
+    DATABASE_URL: str = "postgresql+psycopg2://postgres:postgres123@localhost:5432/prashant_group"
     ALLOWED_ORIGINS: list[str] = ["*"]
     UPLOAD_DIR: str = "uploads"
     MAX_FILE_SIZE_MB: int = 10

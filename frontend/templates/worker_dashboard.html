@@ -11,16 +11,19 @@
 
 {% block content %}
 <!-- Worker Header -->
-<div id="workerHeader" style="background:var(--ink);border-radius:var(--radius-lg);padding:2rem;margin-bottom:1.5rem;color:#fff;">
+<div id="workerHeader" style="background:linear-gradient(135deg,#2D3B42 0%,#1a2830 100%);border-radius:var(--radius-lg);padding:2rem;margin-bottom:1.5rem;color:#fff;box-shadow:0 8px 32px rgba(45,59,66,0.25);">
   <div style="display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap;">
-    <div class="candidate-avatar" id="workerAvatar" style="width:72px;height:72px;border-radius:14px;font-size:2.5rem;">
+    <div id="workerAvatar" style="width:72px;height:72px;border-radius:14px;font-size:2.5rem;background:rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.7);flex-shrink:0;overflow:hidden;">
       <i class="bi bi-person-fill"></i>
     </div>
-    <div>
-      <div style="font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:rgba(255,255,255,0.5);margin-bottom:4px;">Worker ID</div>
-      <h2 id="workerIdStr" style="margin:0 0 4px;color:var(--coral);font-size:1.75rem;">Loading...</h2>
-      <h4 id="workerName" style="margin:0 0 4px;color:#fff;"></h4>
-      <p id="workerMeta" style="margin:0;font-size:13px;color:rgba(255,255,255,0.5);"></p>
+    <div style="flex:1;min-width:0;">
+      <!-- Worker ID badge — high contrast white on dark -->
+      <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(239,70,35,0.18);border:1px solid rgba(239,70,35,0.45);border-radius:20px;padding:3px 12px;margin-bottom:10px;">
+        <i class="bi bi-badge-fill" style="color:#ff7a5c;font-size:12px;"></i>
+        <span id="workerIdStr" style="font-size:13px;font-weight:800;letter-spacing:0.08em;color:#ffffff;font-family:monospace;">Loading…</span>
+      </div>
+      <h4 id="workerName" style="margin:0 0 4px;color:#fff;font-size:1.2rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></h4>
+      <p id="workerMeta" style="margin:0;font-size:13px;color:rgba(255,255,255,0.55);"></p>
     </div>
   </div>
 </div>
