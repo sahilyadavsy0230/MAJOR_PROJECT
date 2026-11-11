@@ -103,14 +103,20 @@
       }
     }
 
-    async function apiPost(url, formData, method = 'POST') {
+    async function apiPost(url, data, method = 'POST') {
       const token = getToken();
       if (!token) return null;
       try {
+        const headers = { 'Authorization': 'Bearer ' + token };
+        let body = data;
+        if (data && !(data instanceof FormData)) {
+          headers['Content-Type'] = 'application/json';
+          body = JSON.stringify(data);
+        }
         const res = await fetch(url, {
           method,
-          headers: { 'Authorization': 'Bearer ' + token },
-          body: formData
+          headers,
+          body
         });
         if (res.status === 401 || res.status === 403) {
           alert('Access denied.');
@@ -128,8 +134,32 @@
       }
     }
 
-    async function apiPatch(url, formData) {
-      return apiPost(url, formData, 'PATCH');
+    async function apiPatch(url, data) {
+      return apiPost(url, data, 'PATCH');
+    }
+
+    async function apiDelete(url) {
+      const token = getToken();
+      if (!token) return null;
+      try {
+        const res = await fetch(url, {
+          method: 'DELETE',
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        if (res.status === 401 || res.status === 403) {
+          alert('Access denied.');
+          return null;
+        }
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({ detail: 'Operation failed' }));
+          alert('Error: ' + (err.detail || 'Operation failed'));
+          return null;
+        }
+        return await res.json();
+      } catch (e) {
+        alert('Network error: ' + e.message);
+        return null;
+      }
     }
 
     // Mark active sidebar link

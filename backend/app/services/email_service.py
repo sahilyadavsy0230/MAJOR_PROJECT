@@ -314,3 +314,74 @@ def send_password_reset_email(
     """
     return send_email_with_attachment(to_email, subject, html_body)
 
+
+def send_inquiry_notification_email(
+    inquirer_name: str,
+    inquirer_phone: str,
+    inquirer_email: str,
+    subject_type: str,
+    message_text: str,
+    inquiry_id: int
+) -> bool:
+    """
+    Sends an email notification to Prashant Group HR/Admin about a new web inquiry,
+    and sends an acknowledgment email to the customer.
+    """
+    admin_recipient = getattr(settings, "SMTP_USER", "") or getattr(settings, "COMPANY_EMAIL", "info@prashantgroupindia.in")
+    admin_subject = f"[New Website Inquiry #{inquiry_id}] {subject_type} from {inquirer_name}"
+
+    admin_html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head><meta charset="utf-8"></head>
+    <body style="font-family: Arial, sans-serif; background: #f8fafc; padding: 20px; color: #1e293b;">
+      <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden;">
+        <div style="background: #2D3B42; color: #ffffff; padding: 24px;">
+          <h2 style="margin: 0; font-size: 20px;">New Contact Inquiry Received</h2>
+          <p style="margin: 4px 0 0; color: #EF4623; font-weight: bold;">Ticket #{inquiry_id} &middot; {subject_type}</p>
+        </div>
+        <div style="padding: 24px;">
+          <p><strong>Name:</strong> {inquirer_name}</p>
+          <p><strong>Phone:</strong> <a href="tel:{inquirer_phone}">{inquirer_phone}</a></p>
+          <p><strong>Email:</strong> <a href="mailto:{inquirer_email}">{inquirer_email}</a></p>
+          <p><strong>Category:</strong> {subject_type}</p>
+          <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 16px 0;">
+          <p><strong>Message / Requirement:</strong></p>
+          <div style="background: #f1f5f9; padding: 16px; border-radius: 8px; font-size: 14px; white-space: pre-wrap;">{message_text}</div>
+          <div style="margin-top: 24px; text-align: center;">
+            <a href="http://127.0.0.1:8000/dashboard/admin/inquiries" style="background: #EF4623; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Open Admin Inquiries Portal</a>
+          </div>
+        </div>
+      </div>
+    </body>
+    </html>
+    """
+    send_email_with_attachment(admin_recipient, admin_subject, admin_html)
+
+    # Acknowledgment to customer
+    user_subject = f"We have received your inquiry (Ticket #{inquiry_id}) — Prashant Group"
+    user_html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head><meta charset="utf-8"></head>
+    <body style="font-family: Arial, sans-serif; background: #f8fafc; padding: 20px; color: #1e293b;">
+      <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden;">
+        <div style="background: #2D3B42; color: #ffffff; padding: 24px;">
+          <h2 style="margin: 0; font-size: 20px;">Thank You, {inquirer_name}!</h2>
+          <p style="margin: 4px 0 0; color: #EF4623;">Prashant Group &middot; Industrial Manpower Solutions</p>
+        </div>
+        <div style="padding: 24px;">
+          <p>We have received your inquiry (Ticket #{inquiry_id}). Our team will get back to you shortly on <strong>{inquirer_phone}</strong> or <strong>{inquirer_email}</strong>.</p>
+          <div style="background: #f1f5f9; padding: 16px; border-radius: 8px; margin: 16px 0;">
+            <p style="margin: 0 0 8px;"><strong>Subject:</strong> {subject_type}</p>
+            <p style="margin: 0;"><strong>Your Message:</strong> {message_text}</p>
+          </div>
+          <p style="font-size: 13px; color: #64748b;">If you need urgent assistance, please call us directly at {settings.COMPANY_PHONE}.</p>
+        </div>
+      </div>
+    </body>
+    </html>
+    """
+    return send_email_with_attachment(inquirer_email, user_subject, user_html)
+
+

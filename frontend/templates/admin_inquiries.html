@@ -1,0 +1,397 @@
+{% extends "dashboard_base.html" %}
+{% block title %}Website Inquiries – Admin{% endblock %}
+
+{% block sidebar %}
+  <div class="sidebar-label">Main</div>
+  <a href="/dashboard/admin" class="sidebar-link"><i class="bi bi-speedometer2"></i> Overview</a>
+  <a href="/dashboard/admin/analytics" class="sidebar-link"><i class="bi bi-bar-chart-fill"></i> Analytics</a>
+  <div class="sidebar-label">Recruitment</div>
+  <a href="/dashboard/admin/jobs" class="sidebar-link"><i class="bi bi-briefcase"></i> Jobs &amp; Applications</a>
+  <a href="/dashboard/admin/candidates" class="sidebar-link"><i class="bi bi-people"></i> Candidates</a>
+  <a href="/dashboard/admin/workers" class="sidebar-link"><i class="bi bi-person-badge"></i> Workers</a>
+  <div class="sidebar-label">Management</div>
+  <a href="/dashboard/admin/supervisors" class="sidebar-link"><i class="bi bi-person-gear"></i> Supervisors</a>
+  <a href="/dashboard/admin/complaints" class="sidebar-link"><i class="bi bi-chat-left-text"></i> Complaints</a>
+  <a href="/dashboard/admin/inquiries" class="sidebar-link active"><i class="bi bi-envelope-paper-fill"></i> Inquiries</a>
+{% endblock %}
+
+{% block content %}
+<div class="dash-header">
+  <div>
+    <h1 class="dash-title">Website Inquiries</h1>
+    <p style="margin:4px 0 0;color:var(--ink-60);font-size:13px;">
+      Direct inquiries from companies looking for manpower, job seekers, and visitors sent via the contact page.
+    </p>
+  </div>
+  <div class="d-flex gap-2 align-items-center flex-wrap">
+    <select id="filterStatus" class="pg-input" style="padding:8px 12px;font-size:13px;width:150px;" onchange="loadInquiries()">
+      <option value="ALL">All Status</option>
+      <option value="NEW" selected>New / Unread</option>
+      <option value="CONTACTED">Contacted</option>
+      <option value="RESOLVED">Resolved</option>
+    </select>
+    <input type="text" id="searchInput" class="pg-input" placeholder="Search name, phone, message..." style="width:230px;padding:8px 14px;font-size:13px;" oninput="debounceSearch()">
+    <button class="btn-primary" onclick="loadInquiries()" style="padding:8px 14px;font-size:13px;">
+      <i class="bi bi-arrow-clockwise"></i> Refresh
+    </button>
+  </div>
+</div>
+
+<!-- Stats Row -->
+<div class="row g-3 mb-4" id="inquiriesStats">
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:linear-gradient(135deg,#EF4623,#f97316);"><i class="bi bi-bell-fill"></i></div>
+      <div class="stat-val" id="statNew">&mdash;</div>
+      <div class="stat-lab">New Inquiries</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706);"><i class="bi bi-telephone-outbound-fill"></i></div>
+      <div class="stat-val" id="statContacted">&mdash;</div>
+      <div class="stat-lab">Contacted Leads</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:linear-gradient(135deg,#10B981,#059669);"><i class="bi bi-check-circle-fill"></i></div>
+      <div class="stat-val" id="statResolved">&mdash;</div>
+      <div class="stat-lab">Resolved</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:linear-gradient(135deg,#2D3B42,#1E293B);"><i class="bi bi-inboxes-fill"></i></div>
+      <div class="stat-val" id="statTotal">&mdash;</div>
+      <div class="stat-lab">Total Inquiries</div>
+    </div>
+  </div>
+</div>
+
+<!-- Inquiries Container -->
+<div id="inquiriesContainer">
+  <div class="content-card" style="text-align:center;padding:3rem;color:var(--ink-60);">
+    <div class="spinner-border text-coral" role="status" style="width:2rem;height:2rem;"></div>
+    <p class="mt-3">Loading inquiries...</p>
+  </div>
+</div>
+
+<!-- Modal: View & Update Inquiry -->
+<div id="inquiryModal" style="display:none;position:fixed;inset:0;background:rgba(45,59,66,0.65);backdrop-filter:blur(4px);z-index:9999;align-items:center;justify-content:center;padding:1.5rem;">
+  <div style="background:#fff;border-radius:var(--radius-lg);padding:2rem;max-width:620px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 40px rgba(0,0,0,0.2);">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.5rem;border-bottom:1px solid var(--ink-05);padding-bottom:1rem;">
+      <div>
+        <h4 style="margin:0;font-family:var(--font-serif);font-size:1.6rem;"><i class="bi bi-envelope-open-fill text-coral me-2"></i> Inquiry Details</h4>
+        <span id="modalTicketTag" style="font-size:12px;font-weight:700;color:var(--coral);letter-spacing:0.05em;"></span>
+      </div>
+      <button onclick="closeModal()" style="background:none;border:none;font-size:1.75rem;cursor:pointer;color:var(--ink-40);">&times;</button>
+    </div>
+
+    <!-- Contact details card -->
+    <div style="background:var(--peach);border-radius:var(--radius-md);padding:1.25rem;margin-bottom:1.25rem;">
+      <div class="row g-2">
+        <div class="col-md-6">
+          <div style="font-size:11px;color:var(--ink-60);font-weight:700;text-transform:uppercase;">Sender Name</div>
+          <div id="mName" style="font-size:15px;font-weight:700;color:var(--ink);"></div>
+        </div>
+        <div class="col-md-6">
+          <div style="font-size:11px;color:var(--ink-60);font-weight:700;text-transform:uppercase;">Inquiry Category</div>
+          <div id="mSubject"></div>
+        </div>
+        <div class="col-md-6">
+          <div style="font-size:11px;color:var(--ink-60);font-weight:700;text-transform:uppercase;">Phone Number</div>
+          <div><a id="mPhone" href="#" style="color:var(--coral);font-weight:700;text-decoration:none;"></a></div>
+        </div>
+        <div class="col-md-6">
+          <div style="font-size:11px;color:var(--ink-60);font-weight:700;text-transform:uppercase;">Email Address</div>
+          <div><a id="mEmail" href="#" style="color:var(--ink);text-decoration:underline;"></a></div>
+        </div>
+        <div class="col-12 mt-2">
+          <div style="font-size:11px;color:var(--ink-60);font-weight:700;text-transform:uppercase;">Date Received</div>
+          <div id="mDate" style="font-size:12px;color:var(--ink-60);"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Message box -->
+    <div style="margin-bottom:1.25rem;">
+      <label class="pg-form-label" style="font-size:12px;">Message / Requirement Details</label>
+      <div id="mMessage" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:var(--radius-sm);padding:1rem;font-size:14px;color:var(--ink);white-space:pre-wrap;line-height:1.6;max-height:180px;overflow-y:auto;"></div>
+    </div>
+
+    <!-- Quick action links -->
+    <div style="display:flex;gap:0.75rem;margin-bottom:1.5rem;">
+      <a id="mCallBtn" href="#" class="btn-secondary" style="flex:1;justify-content:center;text-decoration:none;font-size:13px;padding:9px;">
+        <i class="bi bi-telephone-fill me-1" style="color:#059669;"></i> Call Lead
+      </a>
+      <a id="mEmailBtn" href="#" class="btn-secondary" style="flex:1;justify-content:center;text-decoration:none;font-size:13px;padding:9px;">
+        <i class="bi bi-envelope-fill me-1" style="color:#2563eb;"></i> Email Reply
+      </a>
+    </div>
+
+    <!-- Status & Admin Notes form -->
+    <form id="updateForm" onsubmit="saveInquiryStatus(event)">
+      <input type="hidden" id="modalInquiryId">
+      <div class="mb-3">
+        <label class="pg-form-label">Update Status *</label>
+        <select id="mStatusSelect" class="pg-input" required>
+          <option value="NEW">NEW — Unhandled / Needs Follow-up</option>
+          <option value="CONTACTED">CONTACTED — Reached out via phone/email</option>
+          <option value="RESOLVED">RESOLVED — Requirement fulfilled or closed</option>
+        </select>
+      </div>
+
+      <div class="mb-4">
+        <label class="pg-form-label">Internal Admin Notes (Optional)</label>
+        <textarea id="mNotes" class="pg-input" rows="3" placeholder="Add follow-up notes, quotation status, callback schedule..."></textarea>
+      </div>
+
+      <div class="d-flex justify-content-between align-items-center">
+        <button type="button" class="btn-secondary" onclick="deleteCurrentInquiry()" style="color:#ef4444;border-color:#fca5a5;">
+          <i class="bi bi-trash"></i> Delete
+        </button>
+        <div class="d-flex gap-2">
+          <button type="button" class="btn-secondary" onclick="closeModal()">Cancel</button>
+          <button type="submit" id="saveBtn" class="btn-primary" style="padding:10px 24px;">
+            <i class="bi bi-check2"></i> Save Updates
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentInquiries = [];
+let searchTimeout = null;
+
+function debounceSearch() {
+  clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(renderInquiries, 250);
+}
+
+function getBadge(status) {
+  if (status === 'NEW') return '<span class="status-pill status-rejected" style="background:#FEE2E2;color:#DC2626;font-weight:700;"><i class="bi bi-circle-fill me-1" style="font-size:8px;"></i> NEW</span>';
+  if (status === 'CONTACTED') return '<span class="status-pill status-interview" style="background:#FEF3C7;color:#D97706;font-weight:700;"><i class="bi bi-telephone-fill me-1"></i> CONTACTED</span>';
+  if (status === 'RESOLVED') return '<span class="status-pill status-selected" style="background:#D1FAE5;color:#059669;font-weight:700;"><i class="bi bi-check2-circle me-1"></i> RESOLVED</span>';
+  return `<span class="status-pill">${status}</span>`;
+}
+
+function getCategoryPill(subject) {
+  let style = 'background:#EFF6FF;color:#1D4ED8;';
+  let icon = 'bi-tag-fill';
+  if (subject.includes('Company') || subject.includes('Client')) {
+    style = 'background:#F3E8FF;color:#7E22CE;';
+    icon = 'bi-buildings-fill';
+  } else if (subject.includes('Job') || subject.includes('Candidate')) {
+    style = 'background:#E0F2FE;color:#0284C7;';
+    icon = 'bi-person-badge-fill';
+  } else if (subject.includes('Supervisor')) {
+    style = 'background:#ECFDF5;color:#047857;';
+    icon = 'bi-person-gear';
+  }
+  return `<span style="${style}padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;display:inline-flex;align-items:center;gap:4px;"><i class="bi ${icon}"></i> ${subject}</span>`;
+}
+
+async function loadInquiries() {
+  const status = document.getElementById('filterStatus').value;
+  try {
+    const res = await apiGet(`/api/v1/admin/inquiries?status=${encodeURIComponent(status)}`);
+    if (!res) return;
+
+    // Update stats
+    if (res.counts) {
+      document.getElementById('statNew').textContent = res.counts.new || 0;
+      document.getElementById('statContacted').textContent = res.counts.contacted || 0;
+      document.getElementById('statResolved').textContent = res.counts.resolved || 0;
+      document.getElementById('statTotal').textContent = res.counts.total || 0;
+    }
+
+    currentInquiries = res.inquiries || [];
+    renderInquiries();
+  } catch (err) {
+    console.error('Error loading inquiries:', err);
+    document.getElementById('inquiriesContainer').innerHTML = `
+      <div class="content-card text-center py-5">
+        <i class="bi bi-exclamation-triangle-fill text-danger fs-1"></i>
+        <p class="mt-2 text-danger">Failed to load inquiries. Please check server connection.</p>
+      </div>`;
+  }
+}
+
+function renderInquiries() {
+  const search = document.getElementById('searchInput').value.trim().toLowerCase();
+  const container = document.getElementById('inquiriesContainer');
+
+  const filtered = currentInquiries.filter(i => {
+    if (!search) return true;
+    return (i.name && i.name.toLowerCase().includes(search)) ||
+           (i.phone && i.phone.toLowerCase().includes(search)) ||
+           (i.email && i.email.toLowerCase().includes(search)) ||
+           (i.subject && i.subject.toLowerCase().includes(search)) ||
+           (i.message && i.message.toLowerCase().includes(search));
+  });
+
+  if (!filtered.length) {
+    container.innerHTML = `
+      <div class="content-card text-center py-5">
+        <i class="bi bi-inbox text-secondary fs-1" style="opacity:0.4;"></i>
+        <h5 class="mt-3 mb-1">No inquiries found</h5>
+        <p style="color:var(--ink-60);font-size:13px;">No inquiries match the selected filter or search keyword.</p>
+      </div>`;
+    return;
+  }
+
+  let html = `
+    <div class="content-card" style="padding:0;overflow:hidden;border-radius:var(--radius-lg);">
+      <div class="table-responsive">
+        <table class="pg-table" style="margin:0;">
+          <thead>
+            <tr>
+              <th style="width:70px;">Ticket</th>
+              <th>Sender</th>
+              <th>Category</th>
+              <th>Message Preview</th>
+              <th>Received</th>
+              <th>Status</th>
+              <th style="text-align:right;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+  `;
+
+  filtered.forEach(inq => {
+    const dateStr = inq.created_at ? new Date(inq.created_at).toLocaleDateString('en-IN', {
+      day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+    }) : '—';
+    const preview = inq.message ? (inq.message.length > 70 ? inq.message.substring(0, 70) + '...' : inq.message) : '—';
+
+    html += `
+      <tr style="${inq.status === 'NEW' ? 'background:rgba(239,70,35,0.03);' : ''}">
+        <td><strong style="color:var(--coral);font-size:12px;">#${inq.id}</strong></td>
+        <td>
+          <div style="font-weight:700;color:var(--ink);">${escapeHtml(inq.name)}</div>
+          <div style="font-size:12px;color:var(--ink-60);display:flex;gap:8px;flex-wrap:wrap;margin-top:2px;">
+            <span><i class="bi bi-telephone-fill me-1" style="font-size:10px;"></i>${escapeHtml(inq.phone)}</span>
+            <span><i class="bi bi-envelope-fill me-1" style="font-size:10px;"></i>${escapeHtml(inq.email)}</span>
+          </div>
+        </td>
+        <td>${getCategoryPill(inq.subject)}</td>
+        <td>
+          <div style="font-size:13px;color:var(--ink-80);max-width:320px;">${escapeHtml(preview)}</div>
+          ${inq.admin_notes ? `<div style="font-size:11px;color:#d97706;margin-top:2px;"><i class="bi bi-sticky-fill me-1"></i>Note: ${escapeHtml(inq.admin_notes.substring(0,40))}...</div>` : ''}
+        </td>
+        <td style="font-size:12px;color:var(--ink-60);white-space:nowrap;">${dateStr}</td>
+        <td>${getBadge(inq.status)}</td>
+        <td style="text-align:right;white-space:nowrap;">
+          <button class="btn-primary" style="padding:6px 12px;font-size:12px;" onclick="openInquiryModal(${inq.id})">
+            <i class="bi bi-eye"></i> View
+          </button>
+        </td>
+      </tr>
+    `;
+  });
+
+  html += `
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+  container.innerHTML = html;
+}
+
+function openInquiryModal(id) {
+  const inq = currentInquiries.find(i => i.id === id);
+  if (!inq) return;
+
+  document.getElementById('modalInquiryId').value = inq.id;
+  document.getElementById('modalTicketTag').textContent = `TICKET #${inq.id} — ${inq.status}`;
+  document.getElementById('mName').textContent = inq.name;
+  document.getElementById('mSubject').innerHTML = getCategoryPill(inq.subject);
+
+  const phoneEl = document.getElementById('mPhone');
+  phoneEl.textContent = inq.phone;
+  phoneEl.href = `tel:${inq.phone}`;
+
+  const emailEl = document.getElementById('mEmail');
+  emailEl.textContent = inq.email;
+  emailEl.href = `mailto:${inq.email}?subject=Regarding your inquiry to Prashant Group (Ticket %23${inq.id})`;
+
+  document.getElementById('mCallBtn').href = `tel:${inq.phone}`;
+  document.getElementById('mEmailBtn').href = `mailto:${inq.email}?subject=Regarding your inquiry to Prashant Group (Ticket %23${inq.id})`;
+
+  document.getElementById('mDate').textContent = inq.created_at ? new Date(inq.created_at).toLocaleString('en-IN') : '—';
+  document.getElementById('mMessage').textContent = inq.message;
+  document.getElementById('mStatusSelect').value = inq.status;
+  document.getElementById('mNotes').value = inq.admin_notes || '';
+
+  const modal = document.getElementById('inquiryModal');
+  modal.style.display = 'flex';
+}
+
+function closeModal() {
+  document.getElementById('inquiryModal').style.display = 'none';
+}
+
+async function saveInquiryStatus(e) {
+  e.preventDefault();
+  const id = document.getElementById('modalInquiryId').value;
+  const status = document.getElementById('mStatusSelect').value;
+  const admin_notes = document.getElementById('mNotes').value;
+  const btn = document.getElementById('saveBtn');
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Saving...';
+
+  try {
+    const res = await apiPatch(`/api/v1/admin/inquiries/${id}/status`, { status, admin_notes });
+    if (res && res.success) {
+      closeModal();
+      loadInquiries();
+    } else {
+      alert((res && res.detail) || 'Failed to update inquiry');
+    }
+  } catch (err) {
+    console.error(err);
+    alert('Failed to save update');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-check2"></i> Save Updates';
+  }
+}
+
+async function deleteCurrentInquiry() {
+  const id = document.getElementById('modalInquiryId').value;
+  if (!confirm(`Are you sure you want to delete Inquiry #${id}? This action cannot be undone.`)) return;
+
+  try {
+    const res = await apiDelete(`/api/v1/admin/inquiries/${id}`);
+    if (res && res.success) {
+      closeModal();
+      loadInquiries();
+    }
+  } catch (err) {
+    console.error(err);
+    alert('Failed to delete inquiry');
+  }
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+// Initial load
+loadInquiries();
+</script>
+{% endblock %}
+

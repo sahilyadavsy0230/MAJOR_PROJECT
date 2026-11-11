@@ -16,6 +16,7 @@ from fastapi import APIRouter, Depends, HTTPException, Form, Response
 from sqlalchemy.orm import Session
 from sqlalchemy import func, distinct
 from typing import Optional, List
+from pydantic import BaseModel
 from backend.app.database.session import get_db
 from backend.app.models.user import User, UserRole
 from backend.app.models.candidate import CandidateProfile
@@ -1294,6 +1295,122 @@ def reply_complaint_admin(
         c.status = new_status.strip().upper()
     db.commit()
     return {"message": "Admin reply saved successfully", "status": c.status}
+
+
+# ─── CONTACT INQUIRIES MANAGEMENT ─────────────────────────────────────────────
+
+class InquiryStatusUpdate(BaseModel):
+    status: str
+    admin_notes: Optional[str] = None
+
+
+@router.get("/inquiries")
+def get_admin_inquiries(
+    status: Optional[str] = None,
+    search: Optional[str] = None,
+    db: Session = Depends(get_db),
+    admin=Depends(require_admin)
+):
+    """
+    Returns all contact/support inquiries submitted through the website contact form,
+    with filtering, searching, and count statistics.
+    """
+    from backend.app.models.inquiry import ContactInquiry
+    query = db.query(ContactInquiry)
+
+    if status and status.upper() != "ALL":
+        query = query.filter(ContactInquiry.status == status.upper())
+
+    if search and search.strip():
+        term = f"%{search.strip().lower()}%"
+        query = query.filter(
+            func.lower(ContactInquiry.name).like(term) |
+            func.lower(ContactInquiry.email).like(term) |
+            func.lower(ContactInquiry.phone).like(term) |
+            func.lower(ContactInquiry.subject).like(term) |
+            func.lower(ContactInquiry.message).like(term)
+        )
+
+    inquiries = query.order_by(ContactInquiry.created_at.desc()).all()
+
+    total_count = db.query(ContactInquiry).count()
+    new_count = db.query(ContactInquiry).filter(ContactInquiry.status == "NEW").count()
+    contacted_count = db.query(ContactInquiry).filter(ContactInquiry.status == "CONTACTED").count()
+    resolved_count = db.query(ContactInquiry).filter(ContactInquiry.status == "RESOLVED").count()
+
+    items = []
+    for inq in inquiries:
+        items.append({
+            "id": inq.id,
+            "name": inq.name,
+            "phone": inq.phone,
+            "email": inq.email,
+            "subject": inq.subject,
+            "message": inq.message,
+            "status": inq.status,
+            "admin_notes": inq.admin_notes or "",
+            "created_at": inq.created_at.isoformat() if inq.created_at else None,
+            "updated_at": inq.updated_at.isoformat() if inq.updated_at else None
+        })
+
+    return {
+        "counts": {
+            "total": total_count,
+            "new": new_count,
+            "contacted": contacted_count,
+            "resolved": resolved_count
+        },
+        "inquiries": items
+    }
+
+
+@router.patch("/inquiries/{inquiry_id}/status")
+def update_inquiry_status(
+    inquiry_id: int,
+    payload: InquiryStatusUpdate,
+    db: Session = Depends(get_db),
+    admin=Depends(require_admin)
+):
+    from backend.app.models.inquiry import ContactInquiry
+    inq = db.query(ContactInquiry).filter(ContactInquiry.id == inquiry_id).first()
+    if not inq:
+        raise HTTPException(status_code=404, detail="Inquiry not found")
+
+    new_st = payload.status.strip().upper()
+    if new_st not in ("NEW", "CONTACTED", "RESOLVED"):
+        raise HTTPException(status_code=400, detail="Invalid status value. Must be NEW, CONTACTED, or RESOLVED.")
+
+    inq.status = new_st
+    if payload.admin_notes is not None:
+        inq.admin_notes = payload.admin_notes.strip()
+    db.commit()
+    db.refresh(inq)
+
+    return {
+        "success": True,
+        "message": f"Inquiry status updated to {new_st}",
+        "inquiry": {
+            "id": inq.id,
+            "status": inq.status,
+            "admin_notes": inq.admin_notes
+        }
+    }
+
+
+@router.delete("/inquiries/{inquiry_id}")
+def delete_inquiry(
+    inquiry_id: int,
+    db: Session = Depends(get_db),
+    admin=Depends(require_admin)
+):
+    from backend.app.models.inquiry import ContactInquiry
+    inq = db.query(ContactInquiry).filter(ContactInquiry.id == inquiry_id).first()
+    if not inq:
+        raise HTTPException(status_code=404, detail="Inquiry not found")
+    db.delete(inq)
+    db.commit()
+    return {"success": True, "message": "Inquiry deleted successfully"}
+
 
 
 

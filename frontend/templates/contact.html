@@ -126,22 +126,52 @@
 
 {% block extra_js %}
 <script>
-document.getElementById('contactForm').addEventListener('submit', (e) => {
+document.getElementById('contactForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   const alertEl = document.getElementById('contactAlert');
   const btn = document.getElementById('contactBtn');
+  const form = e.target;
+
+  const payload = {
+    name: form.elements['name'].value.trim(),
+    phone: form.elements['phone'].value.trim(),
+    email: form.elements['email'].value.trim(),
+    subject: form.elements['subject'].value,
+    message: form.elements['message'].value.trim()
+  };
 
   btn.disabled = true;
-  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Sending...';
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span> Submitting Inquiry...';
+  alertEl.classList.add('d-none');
 
-  setTimeout(() => {
-    alertEl.className = 'pg-alert pg-alert-success';
-    alertEl.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i> Thank you! Your inquiry has been received. Our team will contact you within 24 business hours.';
+  try {
+    const res = await fetch('/api/v1/contact', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+
+    if (res.ok && data.success) {
+      alertEl.className = 'pg-alert pg-alert-success';
+      alertEl.innerHTML = `<i class="bi bi-check-circle-fill me-2"></i> ${data.message || 'Thank you! Your inquiry has been received. Ticket #' + (data.inquiry_id || '')}`;
+      alertEl.classList.remove('d-none');
+      form.reset();
+      alertEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } else {
+      alertEl.className = 'pg-alert pg-alert-error';
+      alertEl.innerHTML = `<i class="bi bi-exclamation-triangle-fill me-2"></i> ${data.detail || 'Could not send your message. Please check the fields and try again.'}`;
+      alertEl.classList.remove('d-none');
+    }
+  } catch (err) {
+    console.error('Contact submission error:', err);
+    alertEl.className = 'pg-alert pg-alert-error';
+    alertEl.innerHTML = '<i class="bi bi-wifi-off me-2"></i> Network error. Please check your connection or contact our office directly.';
     alertEl.classList.remove('d-none');
-    e.target.reset();
+  } finally {
     btn.disabled = false;
     btn.innerHTML = '<i class="bi bi-send-fill"></i> Send Message';
-  }, 600);
+  }
 });
 </script>
 {% endblock %}

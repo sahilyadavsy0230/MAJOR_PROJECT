@@ -71,6 +71,32 @@ def _get_supervisor_profile(current_user: User, db: Session) -> SupervisorProfil
     return sup
 
 
+def validate_gps_coordinates(lat_val: Optional[str], lng_val: Optional[str]) -> tuple[str, str]:
+    """
+    Validates mandatory presence and physical geographic bounds (-90..90, -180..180).
+    Protects against spoofing and tampering (OWASP A04 - Insecure Design).
+    """
+    lat_str = str(lat_val).strip() if lat_val else ""
+    lng_str = str(lng_val).strip() if lng_val else ""
+    if not lat_str or not lng_str or lat_str in ("null", "undefined", "0", "0.0") or lng_str in ("null", "undefined", "0", "0.0"):
+        raise HTTPException(
+            status_code=400,
+            detail="GPS device location is strictly required to mark workforce attendance. Please enable GPS on your device."
+        )
+    try:
+        lat = float(lat_str)
+        lng = float(lng_str)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid GPS coordinates format.")
+
+    if not (-90.0 <= lat <= 90.0 and -180.0 <= lng <= 180.0):
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid GPS coordinate bounds. Latitude must be between -90 and 90, Longitude between -180 and 180."
+        )
+    return lat_str, lng_str
+
+
 def _get_supervisor_deployments(sup: Optional[SupervisorProfile], db: Session, only_active: bool = True):
     """
     Finds all deployments assigned to this supervisor either:
@@ -247,6 +273,7 @@ def get_attendance_sheet(
 
 
 # ─── MARK SINGLE WORKER ATTENDANCE WITH GPS ───────────────────────────────────
+@router.post("/attendance")
 @router.post("/attendance/mark")
 def mark_single_attendance(
     worker_id: int = Form(...),          # worker_profile_id
@@ -262,14 +289,8 @@ def mark_single_attendance(
 ):
     sup = _get_supervisor_profile(current_user, db)
 
-    # Mandatory GPS Enforcement for Supervisor
-    lat_val = str(latitude).strip() if latitude else ""
-    lng_val = str(longitude).strip() if longitude else ""
-    if not lat_val or not lng_val or lat_val in ("null", "undefined", "0", "0.0") or lng_val in ("null", "undefined", "0", "0.0"):
-        raise HTTPException(
-            status_code=400,
-            detail="GPS device location is strictly required to mark workforce attendance. Please enable GPS on your device."
-        )
+    # Mandatory GPS Enforcement for Supervisor (OWASP A04)
+    lat_val, lng_val = validate_gps_coordinates(latitude, longitude)
 
     try:
         att_date = datetime.strptime(target_date, "%Y-%m-%d").date()
@@ -378,14 +399,8 @@ def mark_all_attendance(
 ):
     sup = _get_supervisor_profile(current_user, db)
 
-    # Mandatory GPS Enforcement for Supervisor Batch Mark
-    lat_val = str(latitude).strip() if latitude else ""
-    lng_val = str(longitude).strip() if longitude else ""
-    if not lat_val or not lng_val or lat_val in ("null", "undefined", "0", "0.0") or lng_val in ("null", "undefined", "0", "0.0"):
-        raise HTTPException(
-            status_code=400,
-            detail="GPS device location is strictly required to mark workforce attendance. Please enable GPS on your device."
-        )
+    # Mandatory GPS Enforcement for Supervisor Batch Mark (OWASP A04)
+    lat_val, lng_val = validate_gps_coordinates(latitude, longitude)
 
     try:
         att_date = datetime.strptime(target_date, "%Y-%m-%d").date()
@@ -464,8 +479,9 @@ def update_supervisor_live_location(
     if not sup:
         raise HTTPException(status_code=404, detail="Supervisor profile not found")
 
-    sup.last_seen_lat = str(latitude).strip()
-    sup.last_seen_lng = str(longitude).strip()
+    lat_val, lng_val = validate_gps_coordinates(latitude, longitude)
+    sup.last_seen_lat = lat_val
+    sup.last_seen_lng = lng_val
     sup.last_seen_at = datetime.utcnow()  # Store as UTC datetime for reliable comparison
     if location_address:
         sup.last_location_address = location_address.strip()

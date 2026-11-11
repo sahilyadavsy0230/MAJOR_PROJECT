@@ -1,0 +1,62 @@
+name: Prashant Group CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  security-and-testing:
+    name: Security Scan & Automated QA Tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres123
+          POSTGRES_DB: prashant_group
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      ENVIRONMENT: testing
+      DATABASE_URL: postgresql+psycopg2://postgres:postgres123@localhost:5432/prashant_group
+      SECRET_KEY: test-secret-key-at-least-32-bytes-long-for-ci
+      ALGORITHM: HS256
+      ACCESS_TOKEN_EXPIRE_MINUTES: 120
+      DEBUG: "False"
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Stage 1 — Security Vulnerability Audit (Bandit)
+        run: |
+          bandit -r backend/ -ll
+
+      - name: Stage 2 — Database Migrations & Table Initialization
+        run: |
+          python -c "from backend.app.database.session import engine, Base; from backend.app.models import *; Base.metadata.create_all(bind=engine)"
+
+      - name: Stage 3 — Run Automated QA Test Suite (Pytest)
+        run: |
+          pytest tests/ -v --tb=short

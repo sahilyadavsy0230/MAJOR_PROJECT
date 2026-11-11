@@ -1,16 +1,57 @@
 import os
-from fastapi import FastAPI, Request
+import time
+from collections import defaultdict
+from fastapi import FastAPI, Request, Response, HTTPException
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 from backend.app.config import settings
 
+is_prod = settings.ENVIRONMENT.lower() == "production"
+
 app = FastAPI(
     title=settings.PROJECT_NAME,
     description="Prashant Group Workforce Recruitment & Management API",
-    version="2.0.0",
+    version="2.4.0",
     debug=settings.DEBUG,
+    docs_url=None if is_prod else "/docs",
+    redoc_url=None if is_prod else "/redoc",
+    openapi_url=None if is_prod else "/openapi.json",
 )
+
+# ── Security Headers Middleware (OWASP A02 Defense) ──────────
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    # Enforce basic rate limit on sensitive POST endpoints (OWASP A07)
+    path = request.url.path
+    if request.method == "POST" and path in ("/api/v1/auth/login", "/api/v1/auth/forgot-password", "/api/v1/contact"):
+        client_ip = request.client.host if request.client else "unknown"
+        if not check_rate_limit(client_ip, limit=20, window_seconds=60):
+            return JSONResponse(
+                status_code=429,
+                content={"detail": "Too many requests. Please slow down and try again after a minute."}
+            )
+
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    if is_prod:
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    return response
+
+# In-memory sliding window rate-limiter
+_rate_limits = defaultdict(list)
+def check_rate_limit(client_ip: str, limit: int = 20, window_seconds: int = 60) -> bool:
+    now = time.time()
+    valid_window = now - window_seconds
+    _rate_limits[client_ip] = [t for t in _rate_limits[client_ip] if t > valid_window]
+    if len(_rate_limits[client_ip]) >= limit:
+        return False
+    _rate_limits[client_ip].append(now)
+    return True
 
 app.add_middleware(
     CORSMiddleware,
@@ -36,6 +77,7 @@ from backend.app.api.v1.deployment import router as deployment_router
 from backend.app.api.v1.worker     import router as worker_router
 from backend.app.api.v1.supervisor import router as supervisor_router
 from backend.app.api.v1.documents  import router as documents_router
+from backend.app.api.v1.contact    import router as contact_router
 
 app.include_router(auth_router,       prefix="/api/v1/auth",        tags=["Auth"])
 app.include_router(jobs_router,       prefix="/api/v1/jobs",        tags=["Jobs"])
@@ -44,6 +86,26 @@ app.include_router(deployment_router, prefix="/api/v1/deployment",  tags=["Deplo
 app.include_router(worker_router,     prefix="/api/v1/worker",      tags=["Worker"])
 app.include_router(supervisor_router, prefix="/api/v1/supervisor",  tags=["Supervisor"])
 app.include_router(documents_router,  prefix="/api/v1/documents",   tags=["Documents"])
+app.include_router(contact_router,    prefix="/api/v1",             tags=["Contact"])
+
+# ── Health & Monitoring Route (Dossier Section 5) ────────────
+@app.get("/health", tags=["Monitoring"])
+def health_check():
+    from backend.app.database.session import engine
+    from sqlalchemy import text
+    db_status = "connected"
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+    except Exception as e:
+        db_status = f"unhealthy: {e}"
+    return {
+        "status": "healthy" if "unhealthy" not in db_status else "degraded",
+        "database": db_status,
+        "version": "2.4.0",
+        "service": "Prashant Group Workforce Management Platform",
+        "environment": settings.ENVIRONMENT
+    }
 
 # ── Public Page Routes ───────────────────────────────────────
 @app.get("/")
@@ -120,6 +182,10 @@ async def admin_workers(request: Request):
 @app.get("/dashboard/admin/complaints")
 async def admin_complaints(request: Request):
     return templates.TemplateResponse(request=request, name="admin_complaints.html")
+
+@app.get("/dashboard/admin/inquiries")
+async def admin_inquiries(request: Request):
+    return templates.TemplateResponse(request=request, name="admin_inquiries.html")
 
 @app.get("/dashboard/admin/analytics")
 async def admin_analytics(request: Request):

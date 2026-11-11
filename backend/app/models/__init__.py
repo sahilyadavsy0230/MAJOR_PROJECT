@@ -7,3 +7,4 @@ from .interview import Interview, InterviewStatus
 from .supervisor import SupervisorProfile
 from .deployment import Deployment
 from .worker import WorkerProfile, Attendance, Payroll, Complaint
+from .inquiry import ContactInquiry
