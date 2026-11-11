@@ -1,5 +1,5 @@
 ﻿{% extends "dashboard_base.html" %}
-{% block title %}Candidates â€“ Admin{% endblock %}
+{% block title %}Candidates — Admin{% endblock %}
 
 {% block sidebar %}
   <div class="sidebar-label">Main</div>
@@ -53,8 +53,8 @@ function renderCandidates(candidates) {
           </div>
         </div>
         <div style="width:100%;font-size:12px;color:var(--ink-60);">
-          <i class="bi bi-geo-alt me-1"></i>${c.city || 'â€”'} &nbsp;Â·&nbsp;
-          <i class="bi bi-mortarboard me-1"></i>${c.qualification || 'â€”'}
+          <i class="bi bi-geo-alt me-1"></i>${c.city || '—'} &nbsp;·&nbsp;
+          <i class="bi bi-mortarboard me-1"></i>${c.qualification || '—'}
         </div>
         ${c.latest_application ? `
         <div style="width:100%;padding-top:0.75rem;border-top:1px solid var(--ink-05);">

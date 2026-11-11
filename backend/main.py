@@ -25,6 +25,8 @@ app.mount("/static", StaticFiles(directory="frontend/static"), name="static")
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 templates = Jinja2Templates(directory="frontend/templates")
+# Ensure all rendered HTML is served as UTF-8 (prevents â€" mojibake in browser)
+templates.env.charset = "utf-8"
 
 # ── API Routers ──────────────────────────────────────────────
 from backend.app.api.v1.auth       import router as auth_router

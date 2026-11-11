@@ -126,7 +126,8 @@ def get_analytics(db: Session = Depends(get_db), admin=Depends(require_admin)):
     )
     top_locations = [{"location": r.area, "count": r.cnt} for r in location_rows]
 
-    # Monthly applications (last 6 months)
+    # Monthly applications (last 6 months) — PostgreSQL compatible
+    from sqlalchemy import extract
     monthly_apps = []
     current_year = today.year
     current_month = today.month
@@ -137,8 +138,8 @@ def get_analytics(db: Session = Depends(get_db), admin=Depends(require_admin)):
             m += 12
             y -= 1
         count = db.query(JobApplication).filter(
-            func.strftime('%Y', JobApplication.applied_date) == str(y),
-            func.strftime('%m', JobApplication.applied_date) == f"{m:02d}"
+            extract("year",  JobApplication.applied_date) == y,
+            extract("month", JobApplication.applied_date) == m
         ).count()
         monthly_apps.append({"month": f"{y}-{m:02d}", "count": count})
 

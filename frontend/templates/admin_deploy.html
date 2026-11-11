@@ -1,5 +1,5 @@
 ﻿{% extends "dashboard_base.html" %}
-{% block title %}Deploy Candidate â€“ Admin{% endblock %}
+{% block title %}Deploy Candidate — Admin{% endblock %}
 
 {% block sidebar %}
   <div class="sidebar-label">Main</div>
@@ -67,7 +67,7 @@
             <div class="col-md-6">
               <label class="pg-form-label">Assign Supervisor</label>
               <select name="supervisor_id" id="supervisorSelect" class="pg-input">
-                <option value="">â€” Select Supervisor â€”</option>
+                <option value="">— Select Supervisor —</option>
               </select>
             </div>
           </div>
@@ -108,7 +108,7 @@ async function loadData() {
         </div>
         <div>
           <h5 style="margin:0;">${c.full_name}</h5>
-          <p style="margin:0;font-size:13px;color:var(--ink-60);">${c.phone} Â· ${c.email}</p>
+          <p style="margin:0;font-size:13px;color:var(--ink-60);">${c.phone} · ${c.email}</p>
           <div style="margin-top:6px;"><span class="badge-peach">${j.role}</span> <span style="font-size:13px;font-weight:600;margin-left:8px;">${j.title} @ ${j.company}</span></div>
         </div>
       </div>

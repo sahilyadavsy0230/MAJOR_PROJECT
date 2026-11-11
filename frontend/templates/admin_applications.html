@@ -1,5 +1,5 @@
 ﻿{% extends "dashboard_base.html" %}
-{% block title %}Applications â€“ Admin{% endblock %}
+{% block title %}Applications — Admin{% endblock %}
 
 {% block sidebar %}
   <div class="sidebar-label">Main</div>
@@ -49,7 +49,7 @@ async function loadApps() {
   allApps = data.applications;
   const job = data.job;
   document.getElementById('jobTitle').textContent = job.title;
-  document.getElementById('jobMeta').textContent = `${job.company} Â· ${job.role}`;
+  document.getElementById('jobMeta').textContent = `${job.company} · ${job.role}`;
   renderApps();
 }
 
@@ -81,9 +81,9 @@ function renderApps() {
           <span class="status-pill status-${a.status.toLowerCase()}">${a.status}</span>
         </div>
         <div style="width:100%;display:flex;gap:8px;flex-wrap:wrap;font-size:12px;color:var(--ink-60);">
-          <span><i class="bi bi-geo-alt"></i> ${a.candidate.city || 'â€”'}</span>
-          <span><i class="bi bi-mortarboard"></i> ${a.candidate.qualification || 'â€”'}</span>
-          <span><i class="bi bi-calendar"></i> ${a.applied_date ? a.applied_date.split('T')[0] : 'â€”'}</span>
+          <span><i class="bi bi-geo-alt"></i> ${a.candidate.city || '—'}</span>
+          <span><i class="bi bi-mortarboard"></i> ${a.candidate.qualification || '—'}</span>
+          <span><i class="bi bi-calendar"></i> ${a.applied_date ? a.applied_date.split('T')[0] : '—'}</span>
         </div>
         ${a.deployment ? `<div style="width:100%;"><span class="badge-success"><i class="bi bi-person-badge"></i> ${a.deployment.worker_id_str}</span></div>` : ''}
       </div>

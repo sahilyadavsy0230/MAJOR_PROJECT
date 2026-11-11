@@ -1,5 +1,5 @@
 ﻿{% extends "dashboard_base.html" %}
-{% block title %}Analytics â€“ Admin{% endblock %}
+{% block title %}Analytics — Admin{% endblock %}
 
 {% block sidebar %}
   <div class="sidebar-label">Main</div>
@@ -23,39 +23,39 @@
   <span id="analyticsDate" style="font-size:13px;color:var(--ink-60);"></span>
 </div>
 
-<!-- â”€â”€ TOP SUMMARY TILES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+<!-- ── TOP SUMMARY TILES ──────────────────────────────────────────────────── -->
 <div class="row g-3 mb-4" id="summaryTiles">
   <div class="col-6 col-md-3">
     <div class="stat-card">
       <div class="stat-icon" style="background:linear-gradient(135deg,#2D3B42,#1a2327);"><i class="bi bi-person-badge-fill"></i></div>
-      <div class="stat-val" id="sWorkers">â€”</div>
+      <div class="stat-val" id="sWorkers">&mdash;</div>
       <div class="stat-lab">Active Workers</div>
     </div>
   </div>
   <div class="col-6 col-md-3">
     <div class="stat-card">
       <div class="stat-icon" style="background:linear-gradient(135deg,#c0392b,#e74c3c);"><i class="bi bi-buildings-fill"></i></div>
-      <div class="stat-val" id="sCompanies">â€”</div>
+      <div class="stat-val" id="sCompanies">&mdash;</div>
       <div class="stat-lab">Client Companies</div>
     </div>
   </div>
   <div class="col-6 col-md-3">
     <div class="stat-card">
       <div class="stat-icon" style="background:linear-gradient(135deg,#16a085,#1abc9c);"><i class="bi bi-person-gear"></i></div>
-      <div class="stat-val" id="sSupervisors">â€”</div>
+      <div class="stat-val" id="sSupervisors">&mdash;</div>
       <div class="stat-lab">Active Supervisors</div>
     </div>
   </div>
   <div class="col-6 col-md-3">
     <div class="stat-card">
       <div class="stat-icon" style="background:linear-gradient(135deg,#8e44ad,#9b59b6);"><i class="bi bi-people-fill"></i></div>
-      <div class="stat-val" id="sCandidates">â€”</div>
+      <div class="stat-val" id="sCandidates">&mdash;</div>
       <div class="stat-lab">Total Candidates</div>
     </div>
   </div>
 </div>
 
-<!-- â”€â”€ CHARTS ROW 1: Company Workers + Funnel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+<!-- ── CHARTS ROW 1: Company Workers + Funnel ────────────────────────────── -->
 <div class="row g-3 mb-4">
   <!-- Company-wise Workers Bar Chart -->
   <div class="col-lg-7">
@@ -96,7 +96,7 @@
   </div>
 </div>
 
-<!-- â”€â”€ CHARTS ROW 2: Attendance Today + Top Locations + Monthly Trend â”€â”€â”€â”€â”€â”€â”€ -->
+<!-- ── CHARTS ROW 2: Attendance Today + Top Locations + Monthly Trend ─────── -->
 <div class="row g-3 mb-4">
 
   <!-- Attendance Today -->
@@ -112,22 +112,22 @@
         <div style="position:relative;height:160px;max-width:180px;margin:0 auto 1rem;">
           <canvas id="attendanceChart"></canvas>
           <div id="attendanceTotalLabel" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;pointer-events:none;">
-            <span id="attTotalNum" style="font-size:2rem;font-weight:800;font-family:var(--font-serif);">â€”</span>
+            <span id="attTotalNum" style="font-size:2rem;font-weight:800;font-family:var(--font-serif);">&mdash;</span>
             <span style="font-size:11px;color:var(--ink-60);">Marked</span>
           </div>
         </div>
         <div style="display:flex;flex-direction:column;gap:10px;">
           <div style="display:flex;align-items:center;justify-content:space-between;">
             <span style="display:flex;align-items:center;gap:8px;font-size:13px;"><span style="width:12px;height:12px;border-radius:3px;background:#16a34a;display:inline-block;"></span> Present</span>
-            <strong id="attPresent">â€”</strong>
+            <strong id="attPresent">&mdash;</strong>
           </div>
           <div style="display:flex;align-items:center;justify-content:space-between;">
             <span style="display:flex;align-items:center;gap:8px;font-size:13px;"><span style="width:12px;height:12px;border-radius:3px;background:#dc2626;display:inline-block;"></span> Absent</span>
-            <strong id="attAbsent">â€”</strong>
+            <strong id="attAbsent">&mdash;</strong>
           </div>
           <div style="display:flex;align-items:center;justify-content:space-between;">
             <span style="display:flex;align-items:center;gap:8px;font-size:13px;"><span style="width:12px;height:12px;border-radius:3px;background:#d97706;display:inline-block;"></span> Half Day</span>
-            <strong id="attHalf">â€”</strong>
+            <strong id="attHalf">&mdash;</strong>
           </div>
         </div>
       </div>
@@ -189,13 +189,13 @@ async function loadAnalytics() {
   const data = await apiGet('/api/v1/admin/analytics');
   if (!data) return;
 
-  // â”€â”€ Summary Tiles
+  // ── Summary Tiles
   document.getElementById('sWorkers').textContent    = data.summary.total_workers;
   document.getElementById('sCompanies').textContent  = data.summary.total_companies;
   document.getElementById('sSupervisors').textContent= data.summary.active_supervisors;
   document.getElementById('sCandidates').textContent = data.summary.total_candidates;
 
-  // â”€â”€ Company-wise Workers Bar Chart
+  // ── Company-wise Workers Bar Chart
   const cwData = data.company_wise_workers;
   if (cwData && cwData.length) {
     document.getElementById('companyTotalBadge').textContent = `${cwData.reduce((s,c)=>s+c.worker_count,0)} Workers Total`;
@@ -227,7 +227,7 @@ async function loadAnalytics() {
     document.getElementById('noCompanyData').style.display = 'block';
   }
 
-  // â”€â”€ Recruitment Funnel Doughnut
+  // ── Recruitment Funnel Doughnut
   const fn = data.application_funnel;
   const funnelColors = ['#3b82f6','#ca8a04','#9333ea','#16a34a','#dc2626'];
   const funnelLabels = ['Applied','Shortlisted','Interview','Selected','Rejected'];
@@ -253,7 +253,7 @@ async function loadAnalytics() {
     </span>`
   ).join('');
 
-  // â”€â”€ Attendance Today Doughnut
+  // ── Attendance Today Doughnut
   const att = data.attendance_today;
   document.getElementById('attPresent').textContent = att.present;
   document.getElementById('attAbsent').textContent  = att.absent;
@@ -278,7 +278,7 @@ async function loadAnalytics() {
     }
   });
 
-  // â”€â”€ Top Locations
+  // ── Top Locations
   const locs = data.top_locations;
   const locContainer = document.getElementById('topLocations');
   if (!locs || !locs.length) {
@@ -298,7 +298,7 @@ async function loadAnalytics() {
     `).join('');
   }
 
-  // â”€â”€ Monthly Applications Line Chart
+  // ── Monthly Applications Line Chart
   const mData = data.monthly_applications;
   const mCtx = document.getElementById('monthlyChart').getContext('2d');
   if (monthlyChartObj) monthlyChartObj.destroy();
