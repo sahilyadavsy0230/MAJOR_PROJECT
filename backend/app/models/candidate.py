@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, Date
+from sqlalchemy import Column, Integer, String, ForeignKey, Date, LargeBinary
 from sqlalchemy.orm import relationship
 from backend.app.database.session import Base
 
@@ -24,6 +24,7 @@ class CandidateProfile(Base):
     preferred_shift = Column(String, nullable=True)
     source = Column(String, nullable=True)
     profile_photo = Column(String, nullable=True)
+    profile_photo_blob = Column(LargeBinary, nullable=True)
     
     user = relationship("User", back_populates="candidate_profile")
     applications = relationship("JobApplication", back_populates="candidate")

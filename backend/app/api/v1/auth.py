@@ -5,6 +5,7 @@ from datetime import timedelta, datetime
 from fastapi import APIRouter, Depends, HTTPException, status, Form, UploadFile, File, Request, Body
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
+from sqlalchemy.sql import func
 from typing import Optional
 from pydantic import BaseModel
 from backend.app.database.session import get_db
@@ -112,7 +113,7 @@ async def register_candidate(
     # ── Save profile photo ────────────────────────────────────
     if profile_photo.content_type not in img_types:
         raise HTTPException(status_code=400, detail="Profile photo must be JPEG/PNG/WebP")
-    profile_photo_path, _, _ = _save_upload(profile_photo, "photos", allowed_types=img_types)
+    profile_photo_path, profile_photo_bytes, _ = _save_upload(profile_photo, "photos", allowed_types=img_types)
 
     # ── Validate mandatory documents BEFORE creating the user ──
     aadhaar_path, aadhaar_bytes, aadhaar_ext = _save_upload(aadhaar_card, "documents/temp", allowed_types=doc_types)
@@ -151,6 +152,7 @@ async def register_candidate(
         preferred_shift=preferred_shift,
         source=source,
         profile_photo=profile_photo_path,
+        profile_photo_blob=profile_photo_bytes,
     )
     db.add(profile)
     db.commit()
@@ -316,6 +318,20 @@ def get_me(db: Session = Depends(get_db), current_user: User = Depends(get_curre
             "source": cp.source,
             "profile_photo": normalize_web_path(cp.profile_photo),
         }
+        # Retrieve candidate documents (Aadhaar, PAN, marksheets, etc.)
+        docs = db.query(Document).filter(
+            Document.uploaded_by_user_id == current_user.id
+        ).all()
+        data["documents"] = [
+            {
+                "id": d.id,
+                "type": d.document_type,
+                "file_path": normalize_web_path(d.file_path),
+                "status": d.status.value if hasattr(d.status, "value") else str(d.status),
+                "uploaded_at": d.uploaded_at.isoformat() if d.uploaded_at else None
+            }
+            for d in docs
+        ]
     elif current_user.worker_profile:
         wp = current_user.worker_profile
         data["profile"] = {
@@ -357,10 +373,16 @@ async def update_candidate_profile(
     expected_salary: Optional[str] = Form(None),
     preferred_shift: Optional[str] = Form(None),
     profile_photo: Optional[UploadFile] = File(None),
+    # KYC & Educational Documents
+    aadhaar_card: Optional[UploadFile] = File(None),
+    pan_card: Optional[UploadFile] = File(None),
+    marksheet_10th: Optional[UploadFile] = File(None),
+    marksheet_12th: Optional[UploadFile] = File(None),
+    graduation_certificate: Optional[UploadFile] = File(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    """Allows candidates to edit their own profile information and upload an updated profile photo."""
+    """Allows candidates to edit their own profile information, photo, and update/re-upload KYC & educational documents."""
     if current_user.role != UserRole.CANDIDATE or not current_user.candidate_profile:
         raise HTTPException(status_code=403, detail="Only candidates can edit candidate profiles")
 
@@ -402,18 +424,65 @@ async def update_candidate_profile(
     if preferred_shift is not None:
         cp.preferred_shift = preferred_shift.strip()
 
+    # ── Update profile photo if provided ──
     if profile_photo and profile_photo.filename:
         img_types = {"image/jpeg", "image/jpg", "image/png", "image/webp"}
         if profile_photo.content_type not in img_types:
             raise HTTPException(status_code=400, detail="Profile photo must be JPEG, PNG, or WebP")
-        new_photo_path, _, _ = _save_upload(profile_photo, "photos", allowed_types=img_types)
+        new_photo_path, photo_bytes, _ = _save_upload(profile_photo, "photos", allowed_types=img_types)
         cp.profile_photo = new_photo_path
+        cp.profile_photo_blob = photo_bytes
+
+    # ── Update / Re-upload KYC and Educational documents if provided ──
+    doc_types = {"application/pdf", "image/jpeg", "image/jpg", "image/png"}
+    doc_updates = [
+        ("Aadhaar Card", aadhaar_card),
+        ("PAN Card", pan_card),
+        ("10th Marksheet", marksheet_10th),
+        ("12th Marksheet", marksheet_12th),
+        ("Graduation Certificate", graduation_certificate),
+    ]
+
+    for doc_label, upload_file in doc_updates:
+        if upload_file and upload_file.filename:
+            p, file_bytes, ext = _save_upload(
+                upload_file,
+                f"documents/user_{current_user.id}",
+                allowed_types=doc_types
+            )
+            existing_doc = db.query(Document).filter(
+                Document.uploaded_by_user_id == current_user.id,
+                Document.document_type == doc_label
+            ).first()
+
+            if existing_doc:
+                existing_doc.file_path = p
+                existing_doc.file_content = file_bytes
+                existing_doc.file_extension = ext
+                existing_doc.status = DocumentStatus.PENDING  # Reset for admin re-verification
+                existing_doc.uploaded_at = func.now()
+            else:
+                new_doc = Document(
+                    application_id=None,
+                    uploaded_by_user_id=current_user.id,
+                    document_type=doc_label,
+                    file_path=p,
+                    file_content=file_bytes,
+                    file_extension=ext,
+                    status=DocumentStatus.PENDING,
+                )
+                db.add(new_doc)
 
     db.commit()
     db.refresh(cp)
 
+    # Fetch updated documents list
+    updated_docs = db.query(Document).filter(
+        Document.uploaded_by_user_id == current_user.id
+    ).all()
+
     return {
-        "message": "Profile updated successfully!",
+        "message": "Profile and documents updated successfully!",
         "profile": {
             "id": cp.id,
             "full_name": cp.full_name,
@@ -433,7 +502,17 @@ async def update_candidate_profile(
             "expected_salary": cp.expected_salary,
             "preferred_shift": cp.preferred_shift,
             "profile_photo": normalize_web_path(cp.profile_photo),
-        }
+        },
+        "documents": [
+            {
+                "id": d.id,
+                "type": d.document_type,
+                "file_path": normalize_web_path(d.file_path),
+                "status": d.status.value if hasattr(d.status, "value") else str(d.status),
+                "uploaded_at": d.uploaded_at.isoformat() if d.uploaded_at else None
+            }
+            for d in updated_docs
+        ]
     }
 
 

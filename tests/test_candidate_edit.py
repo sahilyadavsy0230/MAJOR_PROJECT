@@ -1,3 +1,4 @@
+import io
 import pytest
 from backend.app.models.user import User, UserRole
 from backend.app.models.candidate import CandidateProfile
@@ -12,14 +13,15 @@ def test_candidate_profile_edit(client, db_session):
     token = create_access_token(data={"sub": candidate_user.email, "role": UserRole.CANDIDATE.value})
     headers = {"Authorization": f"Bearer {token}"}
 
-    # 1. Test get_me returns profile details
+    # 1. Test get_me returns profile details and documents list
     res_me = client.get("/api/v1/auth/me", headers=headers)
     assert res_me.status_code == 200
     me_data = res_me.json()
     assert "profile" in me_data
     assert me_data["profile"]["phone"] is not None
+    assert "documents" in me_data
 
-    # 2. Test edit profile
+    # 2. Test edit profile with both form fields and a document upload
     edit_data = {
         "full_name": "Updated Test Candidate",
         "phone": "9998887776",
@@ -27,12 +29,28 @@ def test_candidate_profile_edit(client, db_session):
         "qualification": "Graduation",
         "preferred_job": "Warehouse Worker"
     }
-    res_edit = client.put("/api/v1/auth/candidate/profile", data=edit_data, headers=headers)
+    dummy_doc_content = b"%PDF-1.4 Mock Aadhaar PDF bytes for test"
+    files = {
+        "aadhaar_card": ("aadhaar_test.pdf", io.BytesIO(dummy_doc_content), "application/pdf")
+    }
+
+    res_edit = client.put("/api/v1/auth/candidate/profile", data=edit_data, files=files, headers=headers)
     assert res_edit.status_code == 200
     updated = res_edit.json()
-    assert updated["message"] == "Profile updated successfully!"
+    assert "successfully" in updated["message"].lower()
     assert updated["profile"]["full_name"] == "Updated Test Candidate"
     assert updated["profile"]["city"] == "Pune"
     assert updated["profile"]["qualification"] == "Graduation"
     assert updated["profile"]["preferred_job"] == "Warehouse Worker"
+    assert "documents" in updated
+    assert any(d["type"] == "Aadhaar Card" for d in updated["documents"])
+
+    # 3. Test photo serving endpoint (fallback to DB blob if disk is empty)
+    photo_path = updated["profile"]["profile_photo"]
+    if photo_path:
+        filename = photo_path.rsplit("/", 1)[-1]
+        res_photo = client.get(f"/uploads/photos/{filename}")
+        assert res_photo.status_code == 200
+        assert "image/" in res_photo.headers.get("content-type", "")
+
 

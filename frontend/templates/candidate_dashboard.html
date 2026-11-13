@@ -29,6 +29,21 @@
   <div class="content-card-body" style="color:var(--ink-60);">Loading profile...</div>
 </div>
 
+<!-- Uploaded Documents & KYC Status -->
+<div class="content-card mb-4" id="documentsCard">
+  <div class="content-card-header d-flex justify-content-between align-items-center">
+    <h5 style="margin:0; font-family:var(--font-serif);font-size:1.15rem;">
+      <i class="bi bi-file-earmark-check text-coral me-2"></i>My Documents &amp; KYC
+    </h5>
+    <button onclick="openEditModal(true)" class="btn btn-outline-secondary btn-sm" style="border-radius:8px;font-weight:600;padding:6px 12px;font-size:12px;">
+      <i class="bi bi-cloud-arrow-up me-1"></i> Update Documents
+    </button>
+  </div>
+  <div class="content-card-body" id="documentsList">
+    <div class="text-center py-3" style="color:var(--ink-60);">Loading documents...</div>
+  </div>
+</div>
+
 <!-- Applications -->
 <div class="content-card">
   <div class="content-card-header">
@@ -198,6 +213,54 @@
             </div>
           </div>
 
+          <!-- Section 4: KYC & Educational Documents -->
+          <div id="modalDocsSection">
+            <h6
+              style="font-size:12px;text-transform:uppercase;letter-spacing:0.06em;font-weight:700;color:var(--coral);margin:24px 0 12px;">
+              4. KYC &amp; Educational Documents
+            </h6>
+            <p style="font-size:12px;color:var(--ink-60);margin-bottom:14px;">
+              Upload new files to update or add missing documents. Supported: PDF, JPG, PNG (Max 10MB each). Leave empty to keep your existing verified files.
+            </p>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label d-flex justify-content-between align-items-center" style="font-size:13px;font-weight:600;">
+                  <span>Aadhaar Card</span>
+                  <span id="badge_aadhaar" class="badge bg-light text-muted border" style="font-size:10px;">Not uploaded</span>
+                </label>
+                <input type="file" name="aadhaar_card" id="f_aadhaar" class="form-control form-control-sm" accept="application/pdf,image/jpeg,image/png">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label d-flex justify-content-between align-items-center" style="font-size:13px;font-weight:600;">
+                  <span>PAN Card</span>
+                  <span id="badge_pan" class="badge bg-light text-muted border" style="font-size:10px;">Not uploaded</span>
+                </label>
+                <input type="file" name="pan_card" id="f_pan" class="form-control form-control-sm" accept="application/pdf,image/jpeg,image/png">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label d-flex justify-content-between align-items-center" style="font-size:13px;font-weight:600;">
+                  <span>10th Marksheet</span>
+                  <span id="badge_10th" class="badge bg-light text-muted border" style="font-size:10px;">Optional</span>
+                </label>
+                <input type="file" name="marksheet_10th" id="f_10th" class="form-control form-control-sm" accept="application/pdf,image/jpeg,image/png">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label d-flex justify-content-between align-items-center" style="font-size:13px;font-weight:600;">
+                  <span>12th Marksheet</span>
+                  <span id="badge_12th" class="badge bg-light text-muted border" style="font-size:10px;">Optional</span>
+                </label>
+                <input type="file" name="marksheet_12th" id="f_12th" class="form-control form-control-sm" accept="application/pdf,image/jpeg,image/png">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label d-flex justify-content-between align-items-center" style="font-size:13px;font-weight:600;">
+                  <span>Graduation Cert.</span>
+                  <span id="badge_grad" class="badge bg-light text-muted border" style="font-size:10px;">Optional</span>
+                </label>
+                <input type="file" name="graduation_certificate" id="f_grad" class="form-control form-control-sm" accept="application/pdf,image/jpeg,image/png">
+              </div>
+            </div>
+          </div>
+
           <div class="modal-footer mt-4"
             style="padding:1rem 0 0;border-top:1px solid var(--ink-05);display:flex;justify-content:flex-end;gap:10px;">
             <button type="button" class="btn btn-light" data-bs-dismiss="modal" style="font-weight:600;">Cancel</button>
@@ -215,12 +278,18 @@
 {% block extra_js %}
 <script>
   let currentProfileData = null;
+  let currentDocuments = [];
 
   function formatPhotoUrl(path) {
     if (!path) return null;
     const clean = path.replace(/\\/g, '/').replace(/^\/+/, '');
     if (clean.startsWith('http://') || clean.startsWith('https://')) return clean;
     return '/' + clean;
+  }
+
+  function viewMyDoc(docId) {
+    const token = localStorage.getItem('token');
+    window.open(`/api/v1/documents/view/${docId}?token=${token || ''}`, '_blank');
   }
 
   async function loadDashboard() {
@@ -232,6 +301,7 @@
     if (profileRes && profileRes.profile) {
       currentProfileData = profileRes.profile;
       currentProfileData.email = profileRes.email;
+      currentDocuments = profileRes.documents || [];
       const p = currentProfileData;
       const photoUrl = formatPhotoUrl(p.profile_photo);
 
@@ -266,6 +336,44 @@
         </div>
       </div>
     `;
+
+      // ── Render Documents Section ──
+      const docsEl = document.getElementById('documentsList');
+      if (!currentDocuments || currentDocuments.length === 0) {
+        docsEl.innerHTML = `
+          <div class="text-center py-4">
+            <i class="bi bi-file-earmark-arrow-up" style="font-size:2.2rem;color:var(--ink-40);"></i>
+            <p style="margin:8px 0 12px;font-size:13px;color:var(--ink-60);">No KYC or educational documents uploaded yet.</p>
+            <button onclick="openEditModal(true)" class="btn btn-outline-primary btn-sm"><i class="bi bi-upload me-1"></i> Upload Documents</button>
+          </div>
+        `;
+      } else {
+        docsEl.innerHTML = `
+          <div class="row g-2">
+            ${currentDocuments.map(d => {
+              let badgeHtml = '<span class="badge bg-warning text-dark"><i class="bi bi-hourglass-split me-1"></i>Pending Verification</span>';
+              if (d.status === 'VERIFIED') badgeHtml = '<span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Verified</span>';
+              if (d.status === 'REJECTED') badgeHtml = '<span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i>Rejected</span>';
+              return `
+                <div class="col-md-6">
+                  <div class="p-3 rounded-3 d-flex align-items-center justify-content-between" style="background:#fafafa;border:1px solid var(--ink-10);">
+                    <div class="d-flex align-items-center gap-2 overflow-hidden">
+                      <i class="bi bi-file-earmark-pdf text-coral" style="font-size:1.6rem;flex-shrink:0;"></i>
+                      <div class="overflow-hidden">
+                        <div style="font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(d.type)}</div>
+                        <div style="font-size:11px;color:var(--ink-60);">${badgeHtml}</div>
+                      </div>
+                    </div>
+                    <button onclick="viewMyDoc(${d.id})" class="btn btn-sm btn-light border" style="font-size:11px;font-weight:600;padding:4px 10px;white-space:nowrap;">
+                      <i class="bi bi-eye text-coral me-1"></i> View
+                    </button>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        `;
+      }
     }
 
     if (apps !== null) {
@@ -306,7 +414,7 @@
     }
   }
 
-  function openEditModal() {
+  function openEditModal(focusDocs = false) {
     if (!currentProfileData) return;
     const p = currentProfileData;
 
@@ -336,12 +444,58 @@
     }
     document.getElementById('newPhotoInput').value = '';
 
+    // Reset document file inputs
+    ['f_aadhaar', 'f_pan', 'f_10th', 'f_12th', 'f_grad'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+
+    // Populate document badge states
+    const docMap = {};
+    (currentDocuments || []).forEach(d => {
+      docMap[d.type] = d;
+    });
+
+    function setBadge(elemId, docType) {
+      const badge = document.getElementById(elemId);
+      if (!badge) return;
+      const d = docMap[docType];
+      if (d) {
+        if (d.status === 'VERIFIED') {
+          badge.className = 'badge bg-success';
+          badge.textContent = 'Uploaded & Verified';
+        } else if (d.status === 'REJECTED') {
+          badge.className = 'badge bg-danger';
+          badge.textContent = 'Rejected - Re-upload';
+        } else {
+          badge.className = 'badge bg-warning text-dark';
+          badge.textContent = 'Uploaded (Pending)';
+        }
+      } else {
+        badge.className = 'badge bg-light text-muted border';
+        badge.textContent = (docType === 'Aadhaar Card' || docType === 'PAN Card') ? 'Not uploaded' : 'Optional';
+      }
+    }
+
+    setBadge('badge_aadhaar', 'Aadhaar Card');
+    setBadge('badge_pan', 'PAN Card');
+    setBadge('badge_10th', '10th Marksheet');
+    setBadge('badge_12th', '12th Marksheet');
+    setBadge('badge_grad', 'Graduation Certificate');
+
     const alertEl = document.getElementById('editAlert');
     alertEl.className = 'alert d-none';
     alertEl.textContent = '';
 
     const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('editProfileModal'));
     modal.show();
+
+    if (focusDocs) {
+      setTimeout(() => {
+        const sec = document.getElementById('modalDocsSection');
+        if (sec) sec.scrollIntoView({ behavior: 'smooth' });
+      }, 350);
+    }
   }
 
   function previewNewPhoto(input) {

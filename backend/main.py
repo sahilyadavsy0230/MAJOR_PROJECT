@@ -114,6 +114,97 @@ templates_dir = BASE_DIR / "frontend" / "templates"
 uploads_dir = Path("/tmp/uploads") if os.environ.get("VERCEL") else (BASE_DIR / "uploads")
 uploads_dir.mkdir(parents=True, exist_ok=True)
 
+# ── Dynamic Fallback Handlers for Persistent Uploads (Vercel Serverless) ──
+@app.get("/uploads/photos/{filename}")
+def serve_profile_photo(filename: str):
+    from backend.app.database.session import SessionLocal
+    from backend.app.models.candidate import CandidateProfile
+    from fastapi.responses import FileResponse, Response
+    clean_name = filename.split("?")[0].strip()
+
+    # 1. Check local disk in uploads_dir
+    local_p = uploads_dir / "photos" / clean_name
+    if local_p.exists() and local_p.is_file():
+        ext = clean_name.rsplit(".", 1)[-1].lower() if "." in clean_name else "jpeg"
+        media_type = f"image/{ext}" if ext in ["png", "jpg", "jpeg", "webp"] else "image/jpeg"
+        return FileResponse(str(local_p), media_type=media_type)
+
+    # 2. Check /tmp/uploads
+    tmp_p = Path("/tmp/uploads/photos") / clean_name
+    if tmp_p.exists() and tmp_p.is_file():
+        ext = clean_name.rsplit(".", 1)[-1].lower() if "." in clean_name else "jpeg"
+        media_type = f"image/{ext}" if ext in ["png", "jpg", "jpeg", "webp"] else "image/jpeg"
+        return FileResponse(str(tmp_p), media_type=media_type)
+
+    # 3. Fallback to PostgreSQL database binary blob
+    db = SessionLocal()
+    try:
+        cp = db.query(CandidateProfile).filter(
+            CandidateProfile.profile_photo.ilike(f"%{clean_name}")
+        ).first()
+        if cp and cp.profile_photo_blob:
+            # Cache locally in current container
+            try:
+                target_p = (Path("/tmp/uploads/photos") if os.environ.get("VERCEL") else (uploads_dir / "photos")) / clean_name
+                target_p.parent.mkdir(parents=True, exist_ok=True)
+                with open(target_p, "wb") as f:
+                    f.write(cp.profile_photo_blob)
+            except Exception:
+                pass
+            ext = clean_name.rsplit(".", 1)[-1].lower() if "." in clean_name else "jpeg"
+            media_type = f"image/{ext}" if ext in ["png", "jpg", "jpeg", "webp"] else "image/jpeg"
+            return Response(
+                content=cp.profile_photo_blob,
+                media_type=media_type,
+                headers={"Cache-Control": "public, max-age=86400"}
+            )
+    finally:
+        db.close()
+
+    raise HTTPException(status_code=404, detail="Photo not found")
+
+
+@app.get("/uploads/documents/{subpath:path}")
+def serve_upload_documents(subpath: str):
+    from backend.app.database.session import SessionLocal
+    from backend.app.models.document import Document
+    from fastapi.responses import FileResponse, Response
+    clean_subpath = subpath.split("?")[0].strip().replace("\\", "/")
+    filename = os.path.basename(clean_subpath)
+
+    # 1. Check local disk
+    local_p = uploads_dir / "documents" / clean_subpath
+    if local_p.exists() and local_p.is_file():
+        ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else "pdf"
+        media_type = "application/pdf" if ext == "pdf" else f"image/{ext}"
+        return FileResponse(str(local_p), media_type=media_type)
+
+    tmp_p = Path("/tmp/uploads/documents") / clean_subpath
+    if tmp_p.exists() and tmp_p.is_file():
+        ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else "pdf"
+        media_type = "application/pdf" if ext == "pdf" else f"image/{ext}"
+        return FileResponse(str(tmp_p), media_type=media_type)
+
+    # 2. Fallback to PostgreSQL database binary
+    db = SessionLocal()
+    try:
+        doc = db.query(Document).filter(
+            Document.file_path.ilike(f"%{filename}")
+        ).first()
+        if doc and doc.file_content:
+            ext = (doc.file_extension or filename.rsplit(".", 1)[-1]).lower()
+            media_type = "application/pdf" if ext == "pdf" else f"image/{ext}"
+            return Response(
+                content=doc.file_content,
+                media_type=media_type,
+                headers={"Cache-Control": "public, max-age=86400"}
+            )
+    finally:
+        db.close()
+
+    raise HTTPException(status_code=404, detail="Document file not found")
+
+
 app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 # Serve uploaded files (restricted access via API endpoints)
 app.mount("/uploads", StaticFiles(directory=str(uploads_dir)), name="uploads")
@@ -149,12 +240,13 @@ def init_db_tables():
         import backend.app.models
         Base.metadata.create_all(bind=engine)
 
-        # Auto-migrate new columns on documents table if using PostgreSQL
+        # Auto-migrate new columns on documents and candidate_profiles tables if using PostgreSQL
         try:
             from sqlalchemy import text
             with engine.connect() as conn:
                 conn.execute(text("ALTER TABLE documents ADD COLUMN IF NOT EXISTS file_content BYTEA;"))
                 conn.execute(text("ALTER TABLE documents ADD COLUMN IF NOT EXISTS file_extension VARCHAR(10);"))
+                conn.execute(text("ALTER TABLE candidate_profiles ADD COLUMN IF NOT EXISTS profile_photo_blob BYTEA;"))
                 conn.commit()
         except Exception as e:
             logger.info(f"Schema auto-migration info: {e}")
