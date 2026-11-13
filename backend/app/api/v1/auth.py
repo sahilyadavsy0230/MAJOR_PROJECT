@@ -14,7 +14,8 @@ from backend.app.models.application import JobApplication
 from backend.app.models.document import Document, DocumentStatus
 from backend.app.security.auth import (
     get_password_hash, verify_password, create_access_token,
-    create_password_reset_token, verify_password_reset_token
+    create_password_reset_token, verify_password_reset_token,
+    get_current_active_user
 )
 from backend.app.services.email_service import send_password_reset_email
 from backend.app.config import settings
@@ -22,8 +23,21 @@ from backend.app.config import settings
 router = APIRouter()
 
 
+def normalize_web_path(path: str | None) -> str | None:
+    """Normalize file paths across Windows / Linux / Vercel to clean web-accessible paths."""
+    if not path:
+        return None
+    clean = str(path).replace("\\", "/")
+    if clean.startswith("/tmp/uploads/"):
+        clean = clean[len("/tmp/"):]
+    elif clean.startswith("tmp/uploads/"):
+        clean = clean[len("tmp/"):]
+    clean = clean.lstrip("/")
+    return clean
+
+
 def _save_upload(upload: UploadFile, subfolder: str, max_mb: int = 10, allowed_types: set = None) -> str:
-    """Save an uploaded file and return the path, or raise HTTPException."""
+    """Save an uploaded file and return the normalized web path, or raise HTTPException."""
     if allowed_types and upload.content_type not in allowed_types:
         raise HTTPException(status_code=400, detail=f"Invalid file type for {upload.filename}. Allowed: {allowed_types}")
     content = upload.file.read()
@@ -41,7 +55,9 @@ def _save_upload(upload: UploadFile, subfolder: str, max_mb: int = 10, allowed_t
     file_path = os.path.join(save_dir, filename)
     with open(file_path, "wb") as f:
         f.write(content)
-    return file_path
+    # Always return a forward-slash normalized web path
+    subfolder_clean = subfolder.replace("\\", "/").strip("/")
+    return f"uploads/{subfolder_clean}/{filename}"
 
 
 @router.post("/register", status_code=status.HTTP_201_CREATED)
@@ -141,8 +157,19 @@ async def register_candidate(
         ext = temp_path.rsplit(".", 1)[-1]
         fname = f"{doc_label}_{uuid.uuid4().hex[:8]}.{ext}"
         new_path = os.path.join(perm_dir, fname)
-        shutil.move(temp_path, new_path)
-        return new_path
+
+        src = temp_path
+        if not os.path.exists(src):
+            clean_rel = temp_path.replace("uploads/", "").replace("uploads\\", "")
+            alt1 = os.path.join(settings.UPLOAD_DIR, clean_rel)
+            alt2 = os.path.join("/tmp", "uploads", clean_rel)
+            if os.path.exists(alt1):
+                src = alt1
+            elif os.path.exists(alt2):
+                src = alt2
+        if os.path.exists(src):
+            shutil.move(src, new_path)
+        return f"uploads/documents/user_{user_id}/{fname}"
 
     # ── Store documents (without application_id yet — profile-level) ──
     # We store them with application_id=None and link later when they apply for a job.
@@ -248,8 +275,7 @@ def logout_user(
 
 
 @router.get("/me")
-def get_me(db: Session = Depends(get_db),
-           current_user: User = Depends(__import__('backend.app.security.auth', fromlist=['get_current_active_user']).get_current_active_user)):
+def get_me(db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
     data = {
         "id": current_user.id,
         "email": current_user.email,
@@ -258,16 +284,145 @@ def get_me(db: Session = Depends(get_db),
     if current_user.candidate_profile:
         cp = current_user.candidate_profile
         data["profile"] = {
+            "id": cp.id,
             "full_name": cp.full_name,
             "phone": cp.phone,
+            "dob": str(cp.dob) if cp.dob else None,
+            "age": cp.age,
+            "gender": cp.gender,
+            "current_address": cp.current_address,
+            "permanent_address": cp.permanent_address,
             "city": cp.city,
             "state": cp.state,
+            "pin_code": cp.pin_code,
             "qualification": cp.qualification,
             "experience": cp.experience,
             "preferred_job": cp.preferred_job,
-            "profile_photo": cp.profile_photo,
+            "preferred_location": cp.preferred_location,
+            "expected_salary": cp.expected_salary,
+            "preferred_shift": cp.preferred_shift,
+            "source": cp.source,
+            "profile_photo": normalize_web_path(cp.profile_photo),
+        }
+    elif current_user.worker_profile:
+        wp = current_user.worker_profile
+        data["profile"] = {
+            "id": wp.id,
+            "name": wp.name,
+            "phone": wp.phone,
+            "current_address": wp.current_address,
+            "permanent_address": wp.permanent_address,
+            "profile_photo": normalize_web_path(wp.candidate.profile_photo) if wp.candidate else None,
+        }
+    elif current_user.supervisor_profile:
+        sp = current_user.supervisor_profile
+        data["profile"] = {
+            "id": sp.id,
+            "name": sp.name,
+            "phone": sp.phone,
+            "area": sp.area,
+            "city": sp.city,
         }
     return data
+
+
+@router.put("/candidate/profile")
+async def update_candidate_profile(
+    full_name: Optional[str] = Form(None),
+    phone: Optional[str] = Form(None),
+    dob: Optional[str] = Form(None),
+    age: Optional[int] = Form(None),
+    gender: Optional[str] = Form(None),
+    current_address: Optional[str] = Form(None),
+    permanent_address: Optional[str] = Form(None),
+    city: Optional[str] = Form(None),
+    state: Optional[str] = Form(None),
+    pin_code: Optional[str] = Form(None),
+    qualification: Optional[str] = Form(None),
+    experience: Optional[str] = Form(None),
+    preferred_job: Optional[str] = Form(None),
+    preferred_location: Optional[str] = Form(None),
+    expected_salary: Optional[str] = Form(None),
+    preferred_shift: Optional[str] = Form(None),
+    profile_photo: Optional[UploadFile] = File(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Allows candidates to edit their own profile information and upload an updated profile photo."""
+    if current_user.role != UserRole.CANDIDATE or not current_user.candidate_profile:
+        raise HTTPException(status_code=403, detail="Only candidates can edit candidate profiles")
+
+    cp = current_user.candidate_profile
+
+    if full_name is not None and full_name.strip():
+        cp.full_name = full_name.strip()
+    if phone is not None and phone.strip():
+        cp.phone = phone.strip()
+    if dob:
+        try:
+            cp.dob = datetime.strptime(dob.strip(), "%Y-%m-%d").date()
+        except ValueError:
+            pass
+    if age is not None:
+        cp.age = age
+    if gender is not None:
+        cp.gender = gender.strip()
+    if current_address is not None:
+        cp.current_address = current_address.strip()
+    if permanent_address is not None:
+        cp.permanent_address = permanent_address.strip()
+    if city is not None:
+        cp.city = city.strip()
+    if state is not None:
+        cp.state = state.strip()
+    if pin_code is not None:
+        cp.pin_code = pin_code.strip()
+    if qualification is not None:
+        cp.qualification = qualification.strip()
+    if experience is not None:
+        cp.experience = experience.strip()
+    if preferred_job is not None:
+        cp.preferred_job = preferred_job.strip()
+    if preferred_location is not None:
+        cp.preferred_location = preferred_location.strip()
+    if expected_salary is not None:
+        cp.expected_salary = expected_salary.strip()
+    if preferred_shift is not None:
+        cp.preferred_shift = preferred_shift.strip()
+
+    if profile_photo and profile_photo.filename:
+        img_types = {"image/jpeg", "image/jpg", "image/png", "image/webp"}
+        if profile_photo.content_type not in img_types:
+            raise HTTPException(status_code=400, detail="Profile photo must be JPEG, PNG, or WebP")
+        new_photo_path = _save_upload(profile_photo, "photos", allowed_types=img_types)
+        cp.profile_photo = new_photo_path
+
+    db.commit()
+    db.refresh(cp)
+
+    return {
+        "message": "Profile updated successfully!",
+        "profile": {
+            "id": cp.id,
+            "full_name": cp.full_name,
+            "phone": cp.phone,
+            "dob": str(cp.dob) if cp.dob else None,
+            "age": cp.age,
+            "gender": cp.gender,
+            "current_address": cp.current_address,
+            "permanent_address": cp.permanent_address,
+            "city": cp.city,
+            "state": cp.state,
+            "pin_code": cp.pin_code,
+            "qualification": cp.qualification,
+            "experience": cp.experience,
+            "preferred_job": cp.preferred_job,
+            "preferred_location": cp.preferred_location,
+            "expected_salary": cp.expected_salary,
+            "preferred_shift": cp.preferred_shift,
+            "profile_photo": normalize_web_path(cp.profile_photo),
+        }
+    }
 
 
 # ── Password Reset Endpoints ─────────────────────────────────

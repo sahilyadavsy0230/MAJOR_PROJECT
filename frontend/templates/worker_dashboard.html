@@ -112,7 +112,8 @@ async function loadWorkerDashboard() {
   document.getElementById('workerMeta').textContent  = `${w.company || ''} · ${w.job_role || ''} · ${w.shift || ''} Shift`;
 
   if (w.profile_photo) {
-    document.getElementById('workerAvatar').innerHTML = `<img src="/${w.profile_photo}" style="width:100%;height:100%;object-fit:cover;">`;
+    const photoSrc = '/' + w.profile_photo.replace(/\\/g, '/').replace(/^\/+/, '');
+    document.getElementById('workerAvatar').innerHTML = `<img src="${photoSrc}" onerror="this.onerror=null; this.parentElement.innerHTML='<i class=\\'bi bi-person-fill\\'></i>';" style="width:100%;height:100%;object-fit:cover;">`;
   }
 
   document.getElementById('sAttendance').textContent = data.summary.attendance_this_month;

@@ -691,8 +691,8 @@ function renderWorkforceCards() {
             ${cwks.map(w => `
               <div style="border:1px solid var(--ink-05);border-radius:var(--radius-md);overflow:hidden;">
                 <div style="background:linear-gradient(135deg,#2d3b42,#455a64);padding:0.8rem;display:flex;align-items:center;gap:0.65rem;">
-                  <div style="width:40px;height:40px;border-radius:9px;background:rgba(255,255,255,0.15);border:2px solid rgba(255,255,255,0.3);display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.1rem;flex-shrink:0;">
-                    ${w.profile_photo ? `<img src="/${w.profile_photo}" style="width:100%;height:100%;object-fit:cover;">` : '<i class="bi bi-person-fill"></i>'}
+                  <div style="width:40px;height:40px;border-radius:9px;background:rgba(255,255,255,0.15);border:2px solid rgba(255,255,255,0.3);overflow:hidden;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.1rem;flex-shrink:0;">
+                    ${w.profile_photo ? `<img src="/${w.profile_photo.replace(/\\/g, '/').replace(/^\/+/, '')}" onerror="this.onerror=null; this.parentElement.innerHTML='<i class=\\'bi bi-person-fill\\'></i>';" style="width:100%;height:100%;object-fit:cover;">` : '<i class="bi bi-person-fill"></i>'}
                   </div>
                   <div style="flex:1;min-width:0;">
                     <div style="font-size:0.8rem;font-weight:700;color:#fff;line-height:1.3;">${escapeHtml(w.name)}</div>

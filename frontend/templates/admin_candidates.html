@@ -45,8 +45,8 @@ function renderCandidates(candidates) {
     <div class="col-lg-3 col-md-4 col-sm-6">
       <div class="candidate-card" style="flex-direction:column;align-items:flex-start;gap:1rem;">
         <div style="display:flex;align-items:center;gap:1rem;">
-          <div class="candidate-avatar" style="width:56px;height:56px;border-radius:12px;">
-            ${c.profile_photo ? `<img src="/${c.profile_photo}" style="width:100%;height:100%;object-fit:cover;">` : '<i class="bi bi-person-fill"></i>'}
+          <div class="candidate-avatar" style="width:56px;height:56px;border-radius:12px;overflow:hidden;background:#FDF1EE;display:flex;align-items:center;justify-content:center;color:var(--coral);font-size:1.8rem;flex-shrink:0;">
+            ${c.profile_photo ? `<img src="/${c.profile_photo.replace(/\\/g, '/').replace(/^\/+/, '')}" onerror="this.onerror=null; this.parentElement.innerHTML='<i class=\\'bi bi-person-fill\\'></i>';" style="width:100%;height:100%;object-fit:cover;">` : '<i class="bi bi-person-fill"></i>'}
           </div>
           <div>
             <h5 style="margin:0;font-size:0.95rem;">${c.full_name}</h5>

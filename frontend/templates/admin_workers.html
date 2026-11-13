@@ -237,7 +237,8 @@ function renderWorkerCard(w) {
   const statusBadge = w.is_active
     ? `<span style="font-size:9px;background:rgba(22,163,74,0.2);color:#86efac;padding:2px 6px;border-radius:999px;font-weight:700;">ACTIVE</span>`
     : `<span style="font-size:9px;background:rgba(220,38,38,0.2);color:#fca5a5;padding:2px 6px;border-radius:999px;font-weight:700;">TERMINATED</span>`;
-  const avatarHtml = w.profile_photo ? `<img src="/${w.profile_photo}" style="width:100%;height:100%;object-fit:cover;">` : `<i class="bi bi-person-fill"></i>`;
+  const photoSrc = w.profile_photo ? '/' + w.profile_photo.replace(/\\/g, '/').replace(/^\/+/, '') : null;
+  const avatarHtml = photoSrc ? `<img src="${photoSrc}" onerror="this.onerror=null; this.parentElement.innerHTML='<i class=\\'bi bi-person-fill\\'></i>';" style="width:100%;height:100%;object-fit:cover;">` : `<i class="bi bi-person-fill"></i>`;
   const nm = escapeHtml(w.full_name), id = escapeHtml(w.worker_id_str||'PGW-'+w.id), role = escapeHtml(w.job_role), shift = escapeHtml(w.shift), area = escapeHtml(w.area||'Factory Site'), phone = escapeHtml(w.phone);
   let actions = w.is_active ? `
     <button class="wca-btn" onclick="openWorkerAttendance(${w.id})"><i class="bi bi-clipboard2-check me-1"></i>Attendance</button>

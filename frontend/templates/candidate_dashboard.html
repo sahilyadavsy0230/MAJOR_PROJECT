@@ -4,18 +4,27 @@
 {% block sidebar %}
   <div class="sidebar-label">My Account</div>
   <a href="/dashboard/candidate" class="sidebar-link active"><i class="bi bi-speedometer2"></i> My Applications</a>
+  <a href="javascript:void(0)" onclick="openEditModal()" class="sidebar-link"><i class="bi bi-person-gear"></i> Edit Profile</a>
   <a href="/jobs" class="sidebar-link"><i class="bi bi-briefcase"></i> Browse Jobs</a>
 {% endblock %}
 
 {% block content %}
 <div class="dash-header">
-  <h1 class="dash-title">My Applications</h1>
-  <a href="/jobs" class="btn-primary"><i class="bi bi-search"></i> Find Jobs</a>
+  <div>
+    <h1 class="dash-title">My Applications</h1>
+    <p style="margin:4px 0 0;color:var(--ink-60);font-size:13px;">Manage your job applications, profile details, and deployment status.</p>
+  </div>
+  <div style="display:flex;gap:10px;align-items:center;">
+    <button onclick="openEditModal()" class="btn-primary" style="background:#2D3B42;border-color:#2D3B42;">
+      <i class="bi bi-pencil-square"></i> Edit Profile
+    </button>
+    <a href="/jobs" class="btn-primary"><i class="bi bi-search"></i> Find Jobs</a>
+  </div>
 </div>
 
 <!-- Profile Summary -->
 <div class="content-card mb-4" id="profileCard">
-  <div class="content-card-body" style="color:var(--ink-60);">Loading...</div>
+  <div class="content-card-body" style="color:var(--ink-60);">Loading profile...</div>
 </div>
 
 <!-- Applications -->
@@ -24,34 +33,220 @@
     <h5 style="margin:0; font-family:var(--font-serif);">Application History</h5>
   </div>
   <div class="content-card-body" id="appsList">
-    <div class="text-center py-4" style="color:var(--ink-60);">Loading...</div>
+    <div class="text-center py-4" style="color:var(--ink-60);">Loading applications...</div>
+  </div>
+</div>
+
+<!-- ─── EDIT CANDIDATE PROFILE MODAL ────────────────────────────────────── -->
+<div class="modal fade" id="editProfileModal" tabindex="-1" aria-labelledby="editProfileModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content" style="border-radius:16px;border:none;box-shadow:0 20px 40px rgba(0,0,0,0.15);">
+      <div class="modal-header" style="border-bottom:1px solid var(--ink-05);padding:1.25rem 1.75rem;">
+        <div>
+          <h5 class="modal-title" id="editProfileModalLabel" style="font-family:var(--font-serif);font-size:1.4rem;margin:0;">
+            <i class="bi bi-person-gear text-coral me-2"></i>Edit Candidate Profile
+          </h5>
+          <p style="margin:2px 0 0;font-size:12px;color:var(--ink-60);">Update your personal details, qualifications, and employment preferences.</p>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" style="padding:1.75rem;">
+        <form id="editProfileForm">
+          <div id="editAlert" class="alert d-none" role="alert"></div>
+
+          <!-- Photo Update Section -->
+          <div class="p-3 mb-4 rounded-3 d-flex align-items-center gap-3" style="background:#f9fafb;border:1px solid var(--ink-05);">
+            <div id="editPhotoPreview" style="width:72px;height:72px;border-radius:14px;overflow:hidden;background:#FDF1EE;display:flex;align-items:center;justify-content:center;color:var(--coral);font-size:2rem;flex-shrink:0;border:2px solid rgba(224,90,58,0.25);">
+              <i class="bi bi-person-fill"></i>
+            </div>
+            <div style="flex:1;">
+              <label class="form-label mb-1" style="font-size:13px;font-weight:700;">Update Profile Photo</label>
+              <input type="file" name="profile_photo" id="newPhotoInput" class="form-control form-control-sm" accept="image/jpeg,image/png,image/webp" onchange="previewNewPhoto(this)">
+              <small class="text-muted" style="font-size:11px;">Max 5MB (JPG, PNG, WebP). Leave blank to keep current photo.</small>
+            </div>
+          </div>
+
+          <!-- Section 1: Personal Info -->
+          <h6 style="font-size:12px;text-transform:uppercase;letter-spacing:0.06em;font-weight:700;color:var(--coral);margin-bottom:12px;">
+            1. Personal Details
+          </h6>
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label" style="font-size:13px;font-weight:600;">Full Name *</label>
+              <input type="text" name="full_name" id="f_full_name" class="form-control" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" style="font-size:13px;font-weight:600;">Phone Number *</label>
+              <input type="tel" name="phone" id="f_phone" class="form-control" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label" style="font-size:13px;font-weight:600;">Date of Birth</label>
+              <input type="date" name="dob" id="f_dob" class="form-control" onchange="calcEditAge(this.value)">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label" style="font-size:13px;font-weight:600;">Age</label>
+              <input type="number" name="age" id="f_age" class="form-control" min="18" max="65">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label" style="font-size:13px;font-weight:600;">Gender</label>
+              <select name="gender" id="f_gender" class="form-select">
+                <option value="">Select Gender</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Section 2: Education & Job Preference -->
+          <h6 style="font-size:12px;text-transform:uppercase;letter-spacing:0.06em;font-weight:700;color:var(--coral);margin:20px 0 12px;">
+            2. Qualifications &amp; Job Role
+          </h6>
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label" style="font-size:13px;font-weight:600;">Highest Qualification</label>
+              <select name="qualification" id="f_qualification" class="form-select">
+                <option value="10th">10th</option>
+                <option value="12th">12th</option>
+                <option value="Diploma">Diploma</option>
+                <option value="ITI">ITI</option>
+                <option value="Graduation">Graduation</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" style="font-size:13px;font-weight:600;">Experience</label>
+              <select name="experience" id="f_experience" class="form-select">
+                <option value="Fresher">Fresher</option>
+                <option value="1-2 Years">1-2 Years</option>
+                <option value="3-5 Years">3-5 Years</option>
+                <option value="5+ Years">5+ Years</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" style="font-size:13px;font-weight:600;">Preferred Job Role</label>
+              <select name="preferred_job" id="f_preferred_job" class="form-select">
+                <option value="Picker">Picker</option>
+                <option value="Packer">Packer</option>
+                <option value="Loader">Loader</option>
+                <option value="Driver">Driver</option>
+                <option value="Delivery Boy">Delivery Boy</option>
+                <option value="Security Guard">Security Guard</option>
+                <option value="Warehouse Worker">Warehouse Worker</option>
+                <option value="Helper">Helper</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" style="font-size:13px;font-weight:600;">Preferred Location</label>
+              <input type="text" name="preferred_location" id="f_preferred_location" class="form-control" placeholder="e.g. Pune, Chakan, Mumbai">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" style="font-size:13px;font-weight:600;">Expected Salary</label>
+              <input type="text" name="expected_salary" id="f_expected_salary" class="form-control" placeholder="e.g. ₹15,000 - ₹20,000">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" style="font-size:13px;font-weight:600;">Preferred Shift</label>
+              <select name="preferred_shift" id="f_preferred_shift" class="form-select">
+                <option value="Day Shift">Day Shift</option>
+                <option value="Night Shift">Night Shift</option>
+                <option value="Rotational Shift">Rotational Shift</option>
+                <option value="Any">Any</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Section 3: Address Details -->
+          <h6 style="font-size:12px;text-transform:uppercase;letter-spacing:0.06em;font-weight:700;color:var(--coral);margin:20px 0 12px;">
+            3. Address &amp; Location
+          </h6>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label" style="font-size:13px;font-weight:600;">Current Address</label>
+              <textarea name="current_address" id="f_current_address" class="form-control" rows="2" placeholder="Street, area, landmark"></textarea>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" style="font-size:13px;font-weight:600;">Permanent Address</label>
+              <textarea name="permanent_address" id="f_permanent_address" class="form-control" rows="2" placeholder="Permanent home address"></textarea>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label" style="font-size:13px;font-weight:600;">City</label>
+              <input type="text" name="city" id="f_city" class="form-control" placeholder="City">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label" style="font-size:13px;font-weight:600;">State</label>
+              <input type="text" name="state" id="f_state" class="form-control" placeholder="State">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label" style="font-size:13px;font-weight:600;">Pin Code</label>
+              <input type="text" name="pin_code" id="f_pin_code" class="form-control" placeholder="Pin code">
+            </div>
+          </div>
+
+          <div class="modal-footer mt-4" style="padding:1rem 0 0;border-top:1px solid var(--ink-05);display:flex;justify-content:flex-end;gap:10px;">
+            <button type="button" class="btn btn-light" data-bs-dismiss="modal" style="font-weight:600;">Cancel</button>
+            <button type="submit" id="saveProfileBtn" class="btn-primary" style="padding:10px 24px;">
+              <i class="bi bi-check2-circle"></i> Save Changes
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
+let currentProfileData = null;
+
+function formatPhotoUrl(path) {
+  if (!path) return null;
+  const clean = path.replace(/\\/g, '/').replace(/^\/+/, '');
+  if (clean.startsWith('http://') || clean.startsWith('https://')) return clean;
+  return '/' + clean;
+}
+
 async function loadDashboard() {
-  const [profile, apps] = await Promise.all([
+  const [profileRes, apps] = await Promise.all([
     apiGet('/api/v1/auth/me'),
     apiGet('/api/v1/jobs/my/applications'),
   ]);
 
-  if (profile && profile.profile) {
-    const p = profile.profile;
+  if (profileRes && profileRes.profile) {
+    currentProfileData = profileRes.profile;
+    currentProfileData.email = profileRes.email;
+    const p = currentProfileData;
+    const photoUrl = formatPhotoUrl(p.profile_photo);
+
     document.getElementById('profileCard').innerHTML = `
-      <div class="content-card-body d-flex align-items-center gap-4 flex-wrap">
-        <div class="candidate-avatar" style="width:72px;height:72px;border-radius:14px;font-size:2.5rem;">
-          ${p.profile_photo ? `<img src="/${p.profile_photo}" style="width:100%;height:100%;object-fit:cover;">` : '<i class="bi bi-person-fill"></i>'}
+      <div class="content-card-body d-flex align-items-center justify-content-between gap-4 flex-wrap">
+        <div class="d-flex align-items-center gap-3 flex-wrap">
+          <div class="candidate-avatar" style="width:76px;height:76px;border-radius:16px;overflow:hidden;background:#FDF1EE;display:flex;align-items:center;justify-content:center;color:var(--coral);font-size:2.4rem;flex-shrink:0;border:2px solid rgba(224,90,58,0.25);">
+            ${photoUrl 
+              ? `<img src="${photoUrl}" onerror="this.onerror=null; this.parentElement.innerHTML='<i class=\\'bi bi-person-fill\\'></i>';" style="width:100%;height:100%;object-fit:cover;">` 
+              : '<i class="bi bi-person-fill"></i>'}
+          </div>
+          <div>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <h4 style="margin:0;font-family:var(--font-serif);font-size:1.4rem;">${escapeHtml(p.full_name)}</h4>
+              <span class="badge bg-light text-dark border" style="font-size:11px;font-weight:600;">Candidate</span>
+            </div>
+            <p style="margin:3px 0 8px;font-size:13px;color:var(--ink-60);">
+              <i class="bi bi-telephone me-1"></i>${escapeHtml(p.phone)} &nbsp;·&nbsp; <i class="bi bi-envelope me-1"></i>${escapeHtml(profileRes.email)}
+            </p>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+              ${p.city ? `<span class="badge-peach"><i class="bi bi-geo-alt"></i> ${escapeHtml(p.city)}</span>` : ''}
+              ${p.qualification ? `<span class="badge-peach"><i class="bi bi-mortarboard"></i> ${escapeHtml(p.qualification)}</span>` : ''}
+              ${p.preferred_job ? `<span class="badge-peach"><i class="bi bi-briefcase"></i> ${escapeHtml(p.preferred_job)}</span>` : ''}
+              ${p.experience ? `<span class="badge-peach"><i class="bi bi-clock-history"></i> ${escapeHtml(p.experience)}</span>` : ''}
+            </div>
+          </div>
         </div>
         <div>
-          <h4 style="margin:0 0 4px;">${p.full_name}</h4>
-          <p style="margin:0 0 8px;font-size:14px;color:var(--ink-60);">${p.phone} · ${profile.email}</p>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            ${p.city ? `<span class="badge-peach"><i class="bi bi-geo-alt"></i> ${p.city}</span>` : ''}
-            ${p.qualification ? `<span class="badge-peach"><i class="bi bi-mortarboard"></i> ${p.qualification}</span>` : ''}
-            ${p.preferred_job ? `<span class="badge-peach"><i class="bi bi-briefcase"></i> ${p.preferred_job}</span>` : ''}
-          </div>
+          <button onclick="openEditModal()" class="btn btn-outline-secondary btn-sm" style="border-radius:8px;font-weight:600;padding:8px 14px;border-color:var(--ink-20);color:var(--ink);">
+            <i class="bi bi-pencil-square me-1"></i> Edit Profile
+          </button>
         </div>
       </div>
     `;
@@ -63,7 +258,7 @@ async function loadDashboard() {
       el.innerHTML = `
         <div class="text-center py-5">
           <i class="bi bi-inbox" style="font-size:3rem;color:var(--ink-60);"></i>
-          <h5 style="margin:1rem 0 0.5rem;">No Applications Yet</h5>
+          <h5 style="margin:1rem 0 0.5rem;font-family:var(--font-serif);">No Applications Yet</h5>
           <p style="color:var(--ink-60);font-size:14px;">Browse available jobs and submit your first application.</p>
           <a href="/jobs" class="btn-primary mt-2"><i class="bi bi-briefcase"></i> Browse Jobs</a>
         </div>`;
@@ -74,8 +269,8 @@ async function loadDashboard() {
       <div style="padding:1.25rem 0;border-bottom:1px solid var(--ink-05);">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;">
           <div>
-            <h5 style="margin:0 0 4px;font-size:1rem;">${a.job.title}</h5>
-            <p style="margin:0;font-size:13px;color:var(--ink-60);">${a.job.company} · ${a.job.role}</p>
+            <h5 style="margin:0 0 4px;font-size:1rem;">${escapeHtml(a.job.title)}</h5>
+            <p style="margin:0;font-size:13px;color:var(--ink-60);">${escapeHtml(a.job.company)} · ${escapeHtml(a.job.role)}</p>
             <p style="margin:4px 0 0;font-size:12px;color:var(--ink-60);">Applied: ${a.applied_date ? a.applied_date.split('T')[0] : '—'}</p>
           </div>
           <span class="status-pill status-${a.status.toLowerCase()}">${a.status}</span>
@@ -83,16 +278,135 @@ async function loadDashboard() {
         ${a.interview ? `
         <div style="margin-top:0.75rem;padding:0.75rem;background:rgba(168,85,247,0.05);border-radius:12px;border:1px solid rgba(168,85,247,0.15);">
           <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#9333ea;margin-bottom:6px;"><i class="bi bi-calendar-event me-1"></i>Interview Scheduled</div>
-          <div style="font-size:13px;">HR: <strong>${a.interview.hr_name}</strong> · Date: <strong>${a.interview.date}</strong> · Time: <strong>${a.interview.time}</strong></div>
+          <div style="font-size:13px;">HR: <strong>${escapeHtml(a.interview.hr_name)}</strong> · Date: <strong>${escapeHtml(a.interview.date)}</strong> · Time: <strong>${escapeHtml(a.interview.time)}</strong></div>
         </div>` : ''}
         ${a.deployment ? `
         <div style="margin-top:0.75rem;padding:0.75rem;background:rgba(34,197,94,0.05);border-radius:12px;border:1px solid rgba(34,197,94,0.15);">
           <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#16a34a;margin-bottom:6px;"><i class="bi bi-check-circle-fill me-1"></i>Deployed as Worker</div>
-          <div style="font-size:13px;">Worker ID: <strong>${a.deployment.worker_id_str}</strong> · ${a.deployment.company} · ${a.deployment.job_role}</div>
+          <div style="font-size:13px;">Worker ID: <strong>${escapeHtml(a.deployment.worker_id_str)}</strong> · ${escapeHtml(a.deployment.company)} · ${escapeHtml(a.deployment.job_role)}</div>
         </div>` : ''}
       </div>
     `).join('') + '<div style="padding-top:0.5rem;"></div>';
   }
+}
+
+function openEditModal() {
+  if (!currentProfileData) return;
+  const p = currentProfileData;
+
+  document.getElementById('f_full_name').value = p.full_name || '';
+  document.getElementById('f_phone').value = p.phone || '';
+  document.getElementById('f_dob').value = p.dob || '';
+  document.getElementById('f_age').value = p.age || '';
+  document.getElementById('f_gender').value = p.gender || '';
+  document.getElementById('f_qualification').value = p.qualification || '10th';
+  document.getElementById('f_experience').value = p.experience || 'Fresher';
+  document.getElementById('f_preferred_job').value = p.preferred_job || 'Picker';
+  document.getElementById('f_preferred_location').value = p.preferred_location || '';
+  document.getElementById('f_expected_salary').value = p.expected_salary || '';
+  document.getElementById('f_preferred_shift').value = p.preferred_shift || 'Day Shift';
+  document.getElementById('f_current_address').value = p.current_address || '';
+  document.getElementById('f_permanent_address').value = p.permanent_address || '';
+  document.getElementById('f_city').value = p.city || '';
+  document.getElementById('f_state').value = p.state || '';
+  document.getElementById('f_pin_code').value = p.pin_code || '';
+
+  const photoUrl = formatPhotoUrl(p.profile_photo);
+  const previewEl = document.getElementById('editPhotoPreview');
+  if (photoUrl) {
+    previewEl.innerHTML = `<img src="${photoUrl}" onerror="this.onerror=null; this.parentElement.innerHTML='<i class=\\'bi bi-person-fill\\'></i>';" style="width:100%;height:100%;object-fit:cover;">`;
+  } else {
+    previewEl.innerHTML = '<i class="bi bi-person-fill"></i>';
+  }
+  document.getElementById('newPhotoInput').value = '';
+
+  const alertEl = document.getElementById('editAlert');
+  alertEl.className = 'alert d-none';
+  alertEl.textContent = '';
+
+  const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('editProfileModal'));
+  modal.show();
+}
+
+function previewNewPhoto(input) {
+  if (input.files && input.files[0]) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      document.getElementById('editPhotoPreview').innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;">`;
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
+}
+
+function calcEditAge(dobStr) {
+  if (!dobStr) return;
+  const dob = new Date(dobStr);
+  const diff = Date.now() - dob.getTime();
+  const ageDate = new Date(diff);
+  const age = Math.abs(ageDate.getUTCFullYear() - 1970);
+  if (!isNaN(age)) {
+    document.getElementById('f_age').value = age;
+  }
+}
+
+document.getElementById('editProfileForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const alertEl = document.getElementById('editAlert');
+  const btn = document.getElementById('saveProfileBtn');
+  const token = localStorage.getItem('token');
+
+  if (!token) {
+    window.location.href = '/login';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Saving...';
+  alertEl.className = 'alert d-none';
+
+  try {
+    const formData = new FormData(e.target);
+    const res = await fetch('/api/v1/auth/candidate/profile', {
+      method: 'PUT',
+      headers: {
+        'Authorization': 'Bearer ' + token
+      },
+      body: formData
+    });
+
+    let data = null;
+    const ct = res.headers.get('content-type') || '';
+    if (ct.includes('application/json')) {
+      data = await res.json();
+    } else {
+      const text = await res.text();
+      data = { detail: text || `Server error (${res.status})` };
+    }
+
+    if (res.ok) {
+      alertEl.className = 'alert alert-success';
+      alertEl.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i> Profile updated successfully!';
+      setTimeout(() => {
+        bootstrap.Modal.getInstance(document.getElementById('editProfileModal')).hide();
+        loadDashboard();
+      }, 1000);
+    } else {
+      alertEl.className = 'alert alert-danger';
+      alertEl.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-2"></i> ' + (data.detail || 'Failed to update profile.');
+    }
+  } catch (err) {
+    console.error('Update profile error:', err);
+    alertEl.className = 'alert alert-danger';
+    alertEl.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-2"></i> Network error: ' + err.message;
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-check2-circle"></i> Save Changes';
+  }
+});
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 }
 
 loadDashboard();

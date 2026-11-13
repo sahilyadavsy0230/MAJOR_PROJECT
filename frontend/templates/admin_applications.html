@@ -65,15 +65,14 @@ function renderApps() {
   }
 
   container.innerHTML = apps.map(a => {
-    const photoSrc = a.candidate.profile_photo
-      ? `/${a.candidate.profile_photo}`
-      : null;
+    const rawPhoto = a.candidate.profile_photo;
+    const photoSrc = rawPhoto ? '/' + rawPhoto.replace(/\\/g, '/').replace(/^\/+/, '') : null;
     return `
     <div class="col-lg-4 col-md-6">
       <div class="candidate-card" onclick="window.location='/dashboard/admin/application/${a.id}'" style="cursor:pointer; flex-direction:column; align-items:flex-start; gap:0.75rem;">
         <div style="display:flex;align-items:center;gap:1rem;width:100%;">
-          <div class="candidate-avatar">
-            ${photoSrc ? `<img src="${photoSrc}" alt="${a.candidate.full_name}">` : `<i class="bi bi-person-fill"></i>`}
+          <div class="candidate-avatar" style="overflow:hidden;background:#FDF1EE;display:flex;align-items:center;justify-content:center;color:var(--coral);">
+            ${photoSrc ? `<img src="${photoSrc}" onerror="this.onerror=null; this.parentElement.innerHTML='<i class=\\'bi bi-person-fill\\'></i>';" alt="${a.candidate.full_name}" style="width:100%;height:100%;object-fit:cover;">` : `<i class="bi bi-person-fill"></i>`}
           </div>
           <div style="flex:1;min-width:0;">
             <h5 style="margin:0;font-size:1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${a.candidate.full_name}</h5>

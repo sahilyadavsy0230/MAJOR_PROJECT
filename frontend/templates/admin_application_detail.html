@@ -243,7 +243,8 @@ async function loadApplication() {
 
   // Profile photo
   if (c.profile_photo) {
-    document.getElementById('candidatePhoto').innerHTML = `<img src="/${c.profile_photo}" style="width:100%;height:100%;object-fit:cover;">`;
+    const pUrl = '/' + c.profile_photo.replace(/\\/g, '/').replace(/^\/+/, '');
+    document.getElementById('candidatePhoto').innerHTML = `<img src="${pUrl}" onerror="this.onerror=null; this.parentElement.innerHTML='<i class=\\'bi bi-person-fill\\'></i>';" style="width:100%;height:100%;object-fit:cover;">`;
   }
 
   document.getElementById('candName').textContent    = c.full_name;
