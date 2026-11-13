@@ -22,6 +22,9 @@ class Settings(BaseSettings):
     SMTP_PASS: str = ""         # Set in .env → Gmail App Password
     SMTP_FROM_NAME: str = "Prashant Group HR"
 
+    # Sentry Error Monitoring (production only)
+    SENTRY_DSN: str = ""        # Set in .env.production → your Sentry DSN
+
     # Company Details (used in emails & PDF letterhead)
     COMPANY_NAME: str = "Prashant Group"
     COMPANY_TAGLINE: str = "Industrial Manpower Solutions"

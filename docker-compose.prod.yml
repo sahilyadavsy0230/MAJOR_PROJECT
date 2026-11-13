@@ -1,0 +1,86 @@
+# ==============================================================================
+# PRASHANT GROUP WORKFORCE PLATFORM — PRODUCTION DOCKER COMPOSE STACK
+# Complete Orchestration: Web API + Hardened PostgreSQL + SSL Nginx
+# ==============================================================================
+
+version: '3.8'
+
+services:
+  # ----------------------------------------------------------------------------
+  # 1. DATABASE: PostgreSQL (Hardened & Isolated on Private Network)
+  # NOTE: Notice port 5432 is NOT mapped to the host! Only accessible internally.
+  # ----------------------------------------------------------------------------
+  db:
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-prashant_group_prod}
+      POSTGRES_USER: ${POSTGRES_USER:-prashant_prod_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ChangeThisStrongPassword123!}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backups:/backups
+    networks:
+      - internal_backend_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ----------------------------------------------------------------------------
+  # 2. APPLICATION: FastAPI Web Application
+  # ----------------------------------------------------------------------------
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: always
+    env_file:
+      - .env.production
+    environment:
+      ENVIRONMENT: "production"
+      DEBUG: "False"
+      DATABASE_URL: "postgresql+psycopg2://${POSTGRES_USER:-prashant_prod_user}:${POSTGRES_PASSWORD:-ChangeThisStrongPassword123!}@db:5432/${POSTGRES_DB:-prashant_group_prod}"
+    volumes:
+      - app_uploads:/app/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - internal_backend_net
+    expose:
+      - "8000"
+
+  # ----------------------------------------------------------------------------
+  # 3. REVERSE PROXY: Nginx with SSL/TLS Termination & Security Headers
+  # ----------------------------------------------------------------------------
+  nginx:
+    image: nginx:alpine
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/prashant_group.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./frontend/static:/app/frontend/static:ro
+      - app_uploads:/app/uploads:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - certbot_www:/var/www/certbot:ro
+    depends_on:
+      - web
+    networks:
+      - internal_backend_net
+
+networks:
+  internal_backend_net:
+    driver: bridge
+    internal: false
+
+volumes:
+  postgres_data:
+    driver: local
+  app_uploads:
+    driver: local
+  certbot_www:
+    driver: local

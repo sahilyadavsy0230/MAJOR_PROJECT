@@ -1,5 +1,7 @@
 import os
 import time
+import logging
+import json
 from collections import defaultdict
 from fastapi import FastAPI, Request, Response, HTTPException
 from fastapi.responses import JSONResponse
@@ -9,6 +11,44 @@ from fastapi.middleware.cors import CORSMiddleware
 from backend.app.config import settings
 
 is_prod = settings.ENVIRONMENT.lower() == "production"
+
+# ── Structured Logging (CloudWatch / Datadog / ELK compatible) ─
+class StructuredJsonFormatter(logging.Formatter):
+    def format(self, record):
+        log_obj = {
+            "timestamp": self.formatTime(record, self.datefmt),
+            "level": record.levelname,
+            "logger": record.name,
+            "message": record.getMessage(),
+            "environment": settings.ENVIRONMENT,
+        }
+        if record.exc_info:
+            log_obj["exception"] = self.formatException(record.exc_info)
+        return json.dumps(log_obj)
+
+logger = logging.getLogger("prashant_group")
+if not logger.handlers:
+    handler = logging.StreamHandler()
+    if is_prod:
+        handler.setFormatter(StructuredJsonFormatter())
+    else:
+        handler.setFormatter(logging.Formatter("[%(asctime)s] [%(levelname)s] %(name)s: %(message)s"))
+    logger.addHandler(handler)
+    logger.setLevel(logging.INFO)
+
+# ── Sentry Error Monitoring & APM ────────────────────────────
+if settings.SENTRY_DSN:
+    try:
+        import sentry_sdk
+        sentry_sdk.init(
+            dsn=settings.SENTRY_DSN,
+            environment=settings.ENVIRONMENT,
+            traces_sample_rate=0.2 if is_prod else 1.0,
+            profiles_sample_rate=0.1 if is_prod else 0.0,
+        )
+        logger.info("Sentry APM & Error Monitoring initialized successfully.")
+    except Exception as e:
+        logger.warning(f"Sentry initialization skipped or failed: {e}")
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -33,7 +73,12 @@ async def add_security_headers(request: Request, call_next):
                 content={"detail": "Too many requests. Please slow down and try again after a minute."}
             )
 
+    start_time = time.time()
     response = await call_next(request)
+    duration_ms = round((time.time() - start_time) * 1000, 2)
+    if is_prod and not path.startswith("/static"):
+        logger.info(f"{request.method} {path} status={response.status_code} duration_ms={duration_ms}")
+
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["X-XSS-Protection"] = "1; mode=block"
