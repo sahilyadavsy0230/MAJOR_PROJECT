@@ -2,17 +2,19 @@
 {% block title %}My Dashboard – Prashant Group{% endblock %}
 
 {% block sidebar %}
-  <div class="sidebar-label">My Account</div>
-  <a href="/dashboard/candidate" class="sidebar-link active"><i class="bi bi-speedometer2"></i> My Applications</a>
-  <a href="javascript:void(0)" onclick="openEditModal()" class="sidebar-link"><i class="bi bi-person-gear"></i> Edit Profile</a>
-  <a href="/jobs" class="sidebar-link"><i class="bi bi-briefcase"></i> Browse Jobs</a>
+<div class="sidebar-label">My Account</div>
+<a href="/dashboard/candidate" class="sidebar-link active"><i class="bi bi-speedometer2"></i> My Applications</a>
+<a href="javascript:void(0)" onclick="openEditModal()" class="sidebar-link"><i class="bi bi-person-gear"></i> Edit
+  Profile</a>
+<a href="/jobs" class="sidebar-link"><i class="bi bi-briefcase"></i> Browse Jobs</a>
 {% endblock %}
 
 {% block content %}
 <div class="dash-header">
   <div>
     <h1 class="dash-title">My Applications</h1>
-    <p style="margin:4px 0 0;color:var(--ink-60);font-size:13px;">Manage your job applications, profile details, and deployment status.</p>
+    <p style="margin:4px 0 0;color:var(--ink-60);font-size:13px;">Manage your job applications, profile details, and
+      deployment status.</p>
   </div>
   <div style="display:flex;gap:10px;align-items:center;">
     <button onclick="openEditModal()" class="btn-primary" style="background:#2D3B42;border-color:#2D3B42;">
@@ -43,10 +45,12 @@
     <div class="modal-content" style="border-radius:16px;border:none;box-shadow:0 20px 40px rgba(0,0,0,0.15);">
       <div class="modal-header" style="border-bottom:1px solid var(--ink-05);padding:1.25rem 1.75rem;">
         <div>
-          <h5 class="modal-title" id="editProfileModalLabel" style="font-family:var(--font-serif);font-size:1.4rem;margin:0;">
+          <h5 class="modal-title" id="editProfileModalLabel"
+            style="font-family:var(--font-serif);font-size:1.4rem;margin:0;">
             <i class="bi bi-person-gear text-coral me-2"></i>Edit Candidate Profile
           </h5>
-          <p style="margin:2px 0 0;font-size:12px;color:var(--ink-60);">Update your personal details, qualifications, and employment preferences.</p>
+          <p style="margin:2px 0 0;font-size:12px;color:var(--ink-60);">Update your personal details, qualifications,
+            and employment preferences.</p>
         </div>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
@@ -55,19 +59,24 @@
           <div id="editAlert" class="alert d-none" role="alert"></div>
 
           <!-- Photo Update Section -->
-          <div class="p-3 mb-4 rounded-3 d-flex align-items-center gap-3" style="background:#f9fafb;border:1px solid var(--ink-05);">
-            <div id="editPhotoPreview" style="width:72px;height:72px;border-radius:14px;overflow:hidden;background:#FDF1EE;display:flex;align-items:center;justify-content:center;color:var(--coral);font-size:2rem;flex-shrink:0;border:2px solid rgba(224,90,58,0.25);">
+          <div class="p-3 mb-4 rounded-3 d-flex align-items-center gap-3"
+            style="background:#f9fafb;border:1px solid var(--ink-05);">
+            <div id="editPhotoPreview"
+              style="width:72px;height:72px;border-radius:14px;overflow:hidden;background:#FDF1EE;display:flex;align-items:center;justify-content:center;color:var(--coral);font-size:2rem;flex-shrink:0;border:2px solid rgba(224,90,58,0.25);">
               <i class="bi bi-person-fill"></i>
             </div>
             <div style="flex:1;">
               <label class="form-label mb-1" style="font-size:13px;font-weight:700;">Update Profile Photo</label>
-              <input type="file" name="profile_photo" id="newPhotoInput" class="form-control form-control-sm" accept="image/jpeg,image/png,image/webp" onchange="previewNewPhoto(this)">
-              <small class="text-muted" style="font-size:11px;">Max 5MB (JPG, PNG, WebP). Leave blank to keep current photo.</small>
+              <input type="file" name="profile_photo" id="newPhotoInput" class="form-control form-control-sm"
+                accept="image/jpeg,image/png,image/webp" onchange="previewNewPhoto(this)">
+              <small class="text-muted" style="font-size:11px;">Max 5MB (JPG, PNG, WebP). Leave blank to keep current
+                photo.</small>
             </div>
           </div>
 
           <!-- Section 1: Personal Info -->
-          <h6 style="font-size:12px;text-transform:uppercase;letter-spacing:0.06em;font-weight:700;color:var(--coral);margin-bottom:12px;">
+          <h6
+            style="font-size:12px;text-transform:uppercase;letter-spacing:0.06em;font-weight:700;color:var(--coral);margin-bottom:12px;">
             1. Personal Details
           </h6>
           <div class="row g-3 mb-3">
@@ -99,7 +108,8 @@
           </div>
 
           <!-- Section 2: Education & Job Preference -->
-          <h6 style="font-size:12px;text-transform:uppercase;letter-spacing:0.06em;font-weight:700;color:var(--coral);margin:20px 0 12px;">
+          <h6
+            style="font-size:12px;text-transform:uppercase;letter-spacing:0.06em;font-weight:700;color:var(--coral);margin:20px 0 12px;">
             2. Qualifications &amp; Job Role
           </h6>
           <div class="row g-3 mb-3">
@@ -139,11 +149,13 @@
             </div>
             <div class="col-md-6">
               <label class="form-label" style="font-size:13px;font-weight:600;">Preferred Location</label>
-              <input type="text" name="preferred_location" id="f_preferred_location" class="form-control" placeholder="e.g. Pune, Chakan, Mumbai">
+              <input type="text" name="preferred_location" id="f_preferred_location" class="form-control"
+                placeholder="e.g. Pune, Chakan, Mumbai">
             </div>
             <div class="col-md-6">
               <label class="form-label" style="font-size:13px;font-weight:600;">Expected Salary</label>
-              <input type="text" name="expected_salary" id="f_expected_salary" class="form-control" placeholder="e.g. ₹15,000 - ₹20,000">
+              <input type="text" name="expected_salary" id="f_expected_salary" class="form-control"
+                placeholder="e.g. ₹15,000 - ₹20,000">
             </div>
             <div class="col-md-6">
               <label class="form-label" style="font-size:13px;font-weight:600;">Preferred Shift</label>
@@ -157,17 +169,20 @@
           </div>
 
           <!-- Section 3: Address Details -->
-          <h6 style="font-size:12px;text-transform:uppercase;letter-spacing:0.06em;font-weight:700;color:var(--coral);margin:20px 0 12px;">
+          <h6
+            style="font-size:12px;text-transform:uppercase;letter-spacing:0.06em;font-weight:700;color:var(--coral);margin:20px 0 12px;">
             3. Address &amp; Location
           </h6>
           <div class="row g-3">
             <div class="col-md-6">
               <label class="form-label" style="font-size:13px;font-weight:600;">Current Address</label>
-              <textarea name="current_address" id="f_current_address" class="form-control" rows="2" placeholder="Street, area, landmark"></textarea>
+              <textarea name="current_address" id="f_current_address" class="form-control" rows="2"
+                placeholder="Street, area, landmark"></textarea>
             </div>
             <div class="col-md-6">
               <label class="form-label" style="font-size:13px;font-weight:600;">Permanent Address</label>
-              <textarea name="permanent_address" id="f_permanent_address" class="form-control" rows="2" placeholder="Permanent home address"></textarea>
+              <textarea name="permanent_address" id="f_permanent_address" class="form-control" rows="2"
+                placeholder="Permanent home address"></textarea>
             </div>
             <div class="col-md-4">
               <label class="form-label" style="font-size:13px;font-weight:600;">City</label>
@@ -183,7 +198,8 @@
             </div>
           </div>
 
-          <div class="modal-footer mt-4" style="padding:1rem 0 0;border-top:1px solid var(--ink-05);display:flex;justify-content:flex-end;gap:10px;">
+          <div class="modal-footer mt-4"
+            style="padding:1rem 0 0;border-top:1px solid var(--ink-05);display:flex;justify-content:flex-end;gap:10px;">
             <button type="button" class="btn btn-light" data-bs-dismiss="modal" style="font-weight:600;">Cancel</button>
             <button type="submit" id="saveProfileBtn" class="btn-primary" style="padding:10px 24px;">
               <i class="bi bi-check2-circle"></i> Save Changes
@@ -198,34 +214,34 @@
 
 {% block extra_js %}
 <script>
-let currentProfileData = null;
+  let currentProfileData = null;
 
-function formatPhotoUrl(path) {
-  if (!path) return null;
-  const clean = path.replace(/\\/g, '/').replace(/^\/+/, '');
-  if (clean.startsWith('http://') || clean.startsWith('https://')) return clean;
-  return '/' + clean;
-}
+  function formatPhotoUrl(path) {
+    if (!path) return null;
+    const clean = path.replace(/\\/g, '/').replace(/^\/+/, '');
+    if (clean.startsWith('http://') || clean.startsWith('https://')) return clean;
+    return '/' + clean;
+  }
 
-async function loadDashboard() {
-  const [profileRes, apps] = await Promise.all([
-    apiGet('/api/v1/auth/me'),
-    apiGet('/api/v1/jobs/my/applications'),
-  ]);
+  async function loadDashboard() {
+    const [profileRes, apps] = await Promise.all([
+      apiGet('/api/v1/auth/me'),
+      apiGet('/api/v1/jobs/my/applications'),
+    ]);
 
-  if (profileRes && profileRes.profile) {
-    currentProfileData = profileRes.profile;
-    currentProfileData.email = profileRes.email;
-    const p = currentProfileData;
-    const photoUrl = formatPhotoUrl(p.profile_photo);
+    if (profileRes && profileRes.profile) {
+      currentProfileData = profileRes.profile;
+      currentProfileData.email = profileRes.email;
+      const p = currentProfileData;
+      const photoUrl = formatPhotoUrl(p.profile_photo);
 
-    document.getElementById('profileCard').innerHTML = `
+      document.getElementById('profileCard').innerHTML = `
       <div class="content-card-body d-flex align-items-center justify-content-between gap-4 flex-wrap">
         <div class="d-flex align-items-center gap-3 flex-wrap">
           <div class="candidate-avatar" style="width:76px;height:76px;border-radius:16px;overflow:hidden;background:#FDF1EE;display:flex;align-items:center;justify-content:center;color:var(--coral);font-size:2.4rem;flex-shrink:0;border:2px solid rgba(224,90,58,0.25);">
-            ${photoUrl 
-              ? `<img src="${photoUrl}" onerror="this.onerror=null; this.parentElement.innerHTML='<i class=\\'bi bi-person-fill\\'></i>';" style="width:100%;height:100%;object-fit:cover;">` 
-              : '<i class="bi bi-person-fill"></i>'}
+            ${photoUrl
+          ? `<img src="${photoUrl}" onerror="this.onerror=null; this.parentElement.innerHTML='<i class=\\'bi bi-person-fill\\'></i>';" style="width:100%;height:100%;object-fit:cover;">`
+          : '<i class="bi bi-person-fill"></i>'}
           </div>
           <div>
             <div style="display:flex;align-items:center;gap:10px;">
@@ -250,22 +266,22 @@ async function loadDashboard() {
         </div>
       </div>
     `;
-  }
+    }
 
-  if (apps !== null) {
-    const el = document.getElementById('appsList');
-    if (!apps.length) {
-      el.innerHTML = `
+    if (apps !== null) {
+      const el = document.getElementById('appsList');
+      if (!apps.length) {
+        el.innerHTML = `
         <div class="text-center py-5">
           <i class="bi bi-inbox" style="font-size:3rem;color:var(--ink-60);"></i>
           <h5 style="margin:1rem 0 0.5rem;font-family:var(--font-serif);">No Applications Yet</h5>
           <p style="color:var(--ink-60);font-size:14px;">Browse available jobs and submit your first application.</p>
           <a href="/jobs" class="btn-primary mt-2"><i class="bi bi-briefcase"></i> Browse Jobs</a>
         </div>`;
-      return;
-    }
+        return;
+      }
 
-    el.innerHTML = apps.map(a => `
+      el.innerHTML = apps.map(a => `
       <div style="padding:1.25rem 0;border-bottom:1px solid var(--ink-05);">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;">
           <div>
@@ -287,128 +303,128 @@ async function loadDashboard() {
         </div>` : ''}
       </div>
     `).join('') + '<div style="padding-top:0.5rem;"></div>';
-  }
-}
-
-function openEditModal() {
-  if (!currentProfileData) return;
-  const p = currentProfileData;
-
-  document.getElementById('f_full_name').value = p.full_name || '';
-  document.getElementById('f_phone').value = p.phone || '';
-  document.getElementById('f_dob').value = p.dob || '';
-  document.getElementById('f_age').value = p.age || '';
-  document.getElementById('f_gender').value = p.gender || '';
-  document.getElementById('f_qualification').value = p.qualification || '10th';
-  document.getElementById('f_experience').value = p.experience || 'Fresher';
-  document.getElementById('f_preferred_job').value = p.preferred_job || 'Picker';
-  document.getElementById('f_preferred_location').value = p.preferred_location || '';
-  document.getElementById('f_expected_salary').value = p.expected_salary || '';
-  document.getElementById('f_preferred_shift').value = p.preferred_shift || 'Day Shift';
-  document.getElementById('f_current_address').value = p.current_address || '';
-  document.getElementById('f_permanent_address').value = p.permanent_address || '';
-  document.getElementById('f_city').value = p.city || '';
-  document.getElementById('f_state').value = p.state || '';
-  document.getElementById('f_pin_code').value = p.pin_code || '';
-
-  const photoUrl = formatPhotoUrl(p.profile_photo);
-  const previewEl = document.getElementById('editPhotoPreview');
-  if (photoUrl) {
-    previewEl.innerHTML = `<img src="${photoUrl}" onerror="this.onerror=null; this.parentElement.innerHTML='<i class=\\'bi bi-person-fill\\'></i>';" style="width:100%;height:100%;object-fit:cover;">`;
-  } else {
-    previewEl.innerHTML = '<i class="bi bi-person-fill"></i>';
-  }
-  document.getElementById('newPhotoInput').value = '';
-
-  const alertEl = document.getElementById('editAlert');
-  alertEl.className = 'alert d-none';
-  alertEl.textContent = '';
-
-  const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('editProfileModal'));
-  modal.show();
-}
-
-function previewNewPhoto(input) {
-  if (input.files && input.files[0]) {
-    const reader = new FileReader();
-    reader.onload = function(e) {
-      document.getElementById('editPhotoPreview').innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;">`;
-    };
-    reader.readAsDataURL(input.files[0]);
-  }
-}
-
-function calcEditAge(dobStr) {
-  if (!dobStr) return;
-  const dob = new Date(dobStr);
-  const diff = Date.now() - dob.getTime();
-  const ageDate = new Date(diff);
-  const age = Math.abs(ageDate.getUTCFullYear() - 1970);
-  if (!isNaN(age)) {
-    document.getElementById('f_age').value = age;
-  }
-}
-
-document.getElementById('editProfileForm').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const alertEl = document.getElementById('editAlert');
-  const btn = document.getElementById('saveProfileBtn');
-  const token = localStorage.getItem('token');
-
-  if (!token) {
-    window.location.href = '/login';
-    return;
+    }
   }
 
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Saving...';
-  alertEl.className = 'alert d-none';
+  function openEditModal() {
+    if (!currentProfileData) return;
+    const p = currentProfileData;
 
-  try {
-    const formData = new FormData(e.target);
-    const res = await fetch('/api/v1/auth/candidate/profile', {
-      method: 'PUT',
-      headers: {
-        'Authorization': 'Bearer ' + token
-      },
-      body: formData
-    });
+    document.getElementById('f_full_name').value = p.full_name || '';
+    document.getElementById('f_phone').value = p.phone || '';
+    document.getElementById('f_dob').value = p.dob || '';
+    document.getElementById('f_age').value = p.age || '';
+    document.getElementById('f_gender').value = p.gender || '';
+    document.getElementById('f_qualification').value = p.qualification || '10th';
+    document.getElementById('f_experience').value = p.experience || 'Fresher';
+    document.getElementById('f_preferred_job').value = p.preferred_job || 'Picker';
+    document.getElementById('f_preferred_location').value = p.preferred_location || '';
+    document.getElementById('f_expected_salary').value = p.expected_salary || '';
+    document.getElementById('f_preferred_shift').value = p.preferred_shift || 'Day Shift';
+    document.getElementById('f_current_address').value = p.current_address || '';
+    document.getElementById('f_permanent_address').value = p.permanent_address || '';
+    document.getElementById('f_city').value = p.city || '';
+    document.getElementById('f_state').value = p.state || '';
+    document.getElementById('f_pin_code').value = p.pin_code || '';
 
-    let data = null;
-    const ct = res.headers.get('content-type') || '';
-    if (ct.includes('application/json')) {
-      data = await res.json();
+    const photoUrl = formatPhotoUrl(p.profile_photo);
+    const previewEl = document.getElementById('editPhotoPreview');
+    if (photoUrl) {
+      previewEl.innerHTML = `<img src="${photoUrl}" onerror="this.onerror=null; this.parentElement.innerHTML='<i class=\\'bi bi-person-fill\\'></i>';" style="width:100%;height:100%;object-fit:cover;">`;
     } else {
-      const text = await res.text();
-      data = { detail: text || `Server error (${res.status})` };
+      previewEl.innerHTML = '<i class="bi bi-person-fill"></i>';
+    }
+    document.getElementById('newPhotoInput').value = '';
+
+    const alertEl = document.getElementById('editAlert');
+    alertEl.className = 'alert d-none';
+    alertEl.textContent = '';
+
+    const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('editProfileModal'));
+    modal.show();
+  }
+
+  function previewNewPhoto(input) {
+    if (input.files && input.files[0]) {
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        document.getElementById('editPhotoPreview').innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;">`;
+      };
+      reader.readAsDataURL(input.files[0]);
+    }
+  }
+
+  function calcEditAge(dobStr) {
+    if (!dobStr) return;
+    const dob = new Date(dobStr);
+    const diff = Date.now() - dob.getTime();
+    const ageDate = new Date(diff);
+    const age = Math.abs(ageDate.getUTCFullYear() - 1970);
+    if (!isNaN(age)) {
+      document.getElementById('f_age').value = age;
+    }
+  }
+
+  document.getElementById('editProfileForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const alertEl = document.getElementById('editAlert');
+    const btn = document.getElementById('saveProfileBtn');
+    const token = localStorage.getItem('token');
+
+    if (!token) {
+      window.location.href = '/login';
+      return;
     }
 
-    if (res.ok) {
-      alertEl.className = 'alert alert-success';
-      alertEl.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i> Profile updated successfully!';
-      setTimeout(() => {
-        bootstrap.Modal.getInstance(document.getElementById('editProfileModal')).hide();
-        loadDashboard();
-      }, 1000);
-    } else {
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Saving...';
+    alertEl.className = 'alert d-none';
+
+    try {
+      const formData = new FormData(e.target);
+      const res = await fetch('/api/v1/auth/candidate/profile', {
+        method: 'PUT',
+        headers: {
+          'Authorization': 'Bearer ' + token
+        },
+        body: formData
+      });
+
+      let data = null;
+      const ct = res.headers.get('content-type') || '';
+      if (ct.includes('application/json')) {
+        data = await res.json();
+      } else {
+        const text = await res.text();
+        data = { detail: text || `Server error (${res.status})` };
+      }
+
+      if (res.ok) {
+        alertEl.className = 'alert alert-success';
+        alertEl.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i> Profile updated successfully!';
+        setTimeout(() => {
+          bootstrap.Modal.getInstance(document.getElementById('editProfileModal')).hide();
+          loadDashboard();
+        }, 1000);
+      } else {
+        alertEl.className = 'alert alert-danger';
+        alertEl.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-2"></i> ' + (data.detail || 'Failed to update profile.');
+      }
+    } catch (err) {
+      console.error('Update profile error:', err);
       alertEl.className = 'alert alert-danger';
-      alertEl.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-2"></i> ' + (data.detail || 'Failed to update profile.');
+      alertEl.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-2"></i> Network error: ' + err.message;
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="bi bi-check2-circle"></i> Save Changes';
     }
-  } catch (err) {
-    console.error('Update profile error:', err);
-    alertEl.className = 'alert alert-danger';
-    alertEl.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-2"></i> Network error: ' + err.message;
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = '<i class="bi bi-check2-circle"></i> Save Changes';
+  });
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
   }
-});
 
-function escapeHtml(str) {
-  if (!str) return '';
-  return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-}
-
-loadDashboard();
+  loadDashboard();
 </script>
 {% endblock %}

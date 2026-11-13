@@ -1,5 +1,5 @@
 import enum
-from sqlalchemy import Column, Integer, String, ForeignKey, Enum, DateTime, Boolean
+from sqlalchemy import Column, Integer, String, ForeignKey, Enum, DateTime, Boolean, LargeBinary
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from backend.app.database.session import Base
@@ -18,6 +18,10 @@ class Document(Base):
     uploaded_by_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     document_type    = Column(String, nullable=False)   # e.g. 'Aadhaar Card', '10th Marksheet'
     file_path        = Column(String, nullable=False)
+    # file_content stores the raw bytes so documents survive serverless cold starts
+    file_content     = Column(LargeBinary, nullable=True)
+    # original filename extension for correct MIME-type on serve
+    file_extension   = Column(String(10), nullable=True)
     status           = Column(Enum(DocumentStatus), default=DocumentStatus.PENDING)
     uploaded_at      = Column(DateTime(timezone=True), server_default=func.now())
 

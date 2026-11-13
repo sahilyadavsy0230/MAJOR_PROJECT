@@ -36,28 +36,38 @@ def normalize_web_path(path: str | None) -> str | None:
     return clean
 
 
-def _save_upload(upload: UploadFile, subfolder: str, max_mb: int = 10, allowed_types: set = None) -> str:
-    """Save an uploaded file and return the normalized web path, or raise HTTPException."""
+def _save_upload(upload: UploadFile, subfolder: str, max_mb: int = 10, allowed_types: set = None) -> tuple:
+    """Save an uploaded file, returning (web_path, raw_bytes, extension).
+    Raw bytes are stored in the DB so documents survive serverless cold-starts (Vercel).
+    """
     if allowed_types and upload.content_type not in allowed_types:
         raise HTTPException(status_code=400, detail=f"Invalid file type for {upload.filename}. Allowed: {allowed_types}")
     content = upload.file.read()
     if len(content) > max_mb * 1024 * 1024:
         raise HTTPException(status_code=400, detail=f"File {upload.filename} too large (max {max_mb} MB)")
+    ext = upload.filename.rsplit(".", 1)[-1].lower() if "." in upload.filename else "bin"
+    filename = f"{uuid.uuid4().hex}.{ext}"
+    # Try to persist on disk (best-effort — will fail on Vercel read-only root, that's OK)
     save_dir = os.path.join(settings.UPLOAD_DIR, subfolder)
     try:
         os.makedirs(save_dir, exist_ok=True)
+        file_path_disk = os.path.join(save_dir, filename)
+        with open(file_path_disk, "wb") as f:
+            f.write(content)
     except OSError:
-        # Fallback for serverless environments (Vercel / AWS Lambda where root is read-only)
-        save_dir = os.path.join("/tmp", "uploads", subfolder)
-        os.makedirs(save_dir, exist_ok=True)
-    ext = upload.filename.rsplit(".", 1)[-1] if "." in upload.filename else "bin"
-    filename = f"{uuid.uuid4().hex}.{ext}"
-    file_path = os.path.join(save_dir, filename)
-    with open(file_path, "wb") as f:
-        f.write(content)
+        try:
+            # Fallback for serverless environments (Vercel / AWS Lambda)
+            save_dir = os.path.join("/tmp", "uploads", subfolder)
+            os.makedirs(save_dir, exist_ok=True)
+            file_path_disk = os.path.join(save_dir, filename)
+            with open(file_path_disk, "wb") as f:
+                f.write(content)
+        except OSError:
+            pass  # Can't write to disk — bytes still saved in DB below
     # Always return a forward-slash normalized web path
     subfolder_clean = subfolder.replace("\\", "/").strip("/")
-    return f"uploads/{subfolder_clean}/{filename}"
+    web_path = f"uploads/{subfolder_clean}/{filename}"
+    return web_path, content, ext
 
 
 @router.post("/register", status_code=status.HTTP_201_CREATED)
@@ -102,11 +112,11 @@ async def register_candidate(
     # ── Save profile photo ────────────────────────────────────
     if profile_photo.content_type not in img_types:
         raise HTTPException(status_code=400, detail="Profile photo must be JPEG/PNG/WebP")
-    profile_photo_path = _save_upload(profile_photo, "photos", allowed_types=img_types)
+    profile_photo_path, _, _ = _save_upload(profile_photo, "photos", allowed_types=img_types)
 
     # ── Validate mandatory documents BEFORE creating the user ──
-    aadhaar_path = _save_upload(aadhaar_card, "documents/temp", allowed_types=doc_types)
-    pan_path     = _save_upload(pan_card,     "documents/temp", allowed_types=doc_types)
+    aadhaar_path, aadhaar_bytes, aadhaar_ext = _save_upload(aadhaar_card, "documents/temp", allowed_types=doc_types)
+    pan_path, pan_bytes, pan_ext = _save_upload(pan_card, "documents/temp", allowed_types=doc_types)
 
     # ── Create User & Profile ─────────────────────────────────
     user = User(email=email, hashed_password=get_password_hash(password), role=UserRole.CANDIDATE)
@@ -180,37 +190,39 @@ async def register_candidate(
 
     aadhaar_perm = move_to_permanent(aadhaar_path, user.id, "aadhaar")
     pan_perm     = move_to_permanent(pan_path,     user.id, "pan")
-    doc_entries.append(("Aadhaar Card",  aadhaar_perm, True))
-    doc_entries.append(("PAN Card",      pan_perm,     True))
+    doc_entries.append(("Aadhaar Card",  aadhaar_perm, aadhaar_bytes, aadhaar_ext, True))
+    doc_entries.append(("PAN Card",      pan_perm,     pan_bytes,     pan_ext,     True))
 
     if marksheet_10th and marksheet_10th.filename:
         try:
-            p = _save_upload(marksheet_10th, f"documents/user_{user.id}", allowed_types=doc_types)
-            doc_entries.append(("10th Marksheet", p, False))
+            p, b, ext = _save_upload(marksheet_10th, f"documents/user_{user.id}", allowed_types=doc_types)
+            doc_entries.append(("10th Marksheet", p, b, ext, False))
         except Exception:
             pass
 
     if marksheet_12th and marksheet_12th.filename:
         try:
-            p = _save_upload(marksheet_12th, f"documents/user_{user.id}", allowed_types=doc_types)
-            doc_entries.append(("12th Marksheet", p, False))
+            p, b, ext = _save_upload(marksheet_12th, f"documents/user_{user.id}", allowed_types=doc_types)
+            doc_entries.append(("12th Marksheet", p, b, ext, False))
         except Exception:
             pass
 
     if graduation_certificate and graduation_certificate.filename:
         try:
-            p = _save_upload(graduation_certificate, f"documents/user_{user.id}", allowed_types=doc_types)
-            doc_entries.append(("Graduation Certificate", p, False))
+            p, b, ext = _save_upload(graduation_certificate, f"documents/user_{user.id}", allowed_types=doc_types)
+            doc_entries.append(("Graduation Certificate", p, b, ext, False))
         except Exception:
             pass
 
     # ── Persist Document records (linked to profile via user, no app yet) ──
     # We use application_id=None at registration; they get linked on first job apply
-    for doc_type, file_path, is_mandatory in doc_entries:
+    for doc_type, file_path, file_content, file_extension, is_mandatory in doc_entries:
         doc = Document(
             application_id=None,   # will be linked when candidate applies for a job
             document_type=doc_type,
             file_path=file_path,
+            file_content=file_content,
+            file_extension=file_extension,
             status=DocumentStatus.PENDING,
             uploaded_by_user_id=user.id,
         )
@@ -394,7 +406,7 @@ async def update_candidate_profile(
         img_types = {"image/jpeg", "image/jpg", "image/png", "image/webp"}
         if profile_photo.content_type not in img_types:
             raise HTTPException(status_code=400, detail="Profile photo must be JPEG, PNG, or WebP")
-        new_photo_path = _save_upload(profile_photo, "photos", allowed_types=img_types)
+        new_photo_path, _, _ = _save_upload(profile_photo, "photos", allowed_types=img_types)
         cp.profile_photo = new_photo_path
 
     db.commit()

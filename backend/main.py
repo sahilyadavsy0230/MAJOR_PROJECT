@@ -149,6 +149,16 @@ def init_db_tables():
         import backend.app.models
         Base.metadata.create_all(bind=engine)
 
+        # Auto-migrate new columns on documents table if using PostgreSQL
+        try:
+            from sqlalchemy import text
+            with engine.connect() as conn:
+                conn.execute(text("ALTER TABLE documents ADD COLUMN IF NOT EXISTS file_content BYTEA;"))
+                conn.execute(text("ALTER TABLE documents ADD COLUMN IF NOT EXISTS file_extension VARCHAR(10);"))
+                conn.commit()
+        except Exception as e:
+            logger.info(f"Schema auto-migration info: {e}")
+
         db = SessionLocal()
         from backend.app.models.user import User, UserRole
         from backend.app.security.auth import get_password_hash

@@ -35,3 +35,4 @@ def test_candidate_profile_edit(client, db_session):
     assert updated["profile"]["city"] == "Pune"
     assert updated["profile"]["qualification"] == "Graduation"
     assert updated["profile"]["preferred_job"] == "Warehouse Worker"
+

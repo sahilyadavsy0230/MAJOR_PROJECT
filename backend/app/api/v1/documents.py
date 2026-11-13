@@ -2,7 +2,7 @@
 import os, shutil, uuid
 from fastapi import APIRouter, Depends, HTTPException, Form, UploadFile, File
 from sqlalchemy.orm import Session
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from backend.app.database.session import get_db
 from backend.app.models.user import User, UserRole
 from backend.app.models.application import JobApplication
@@ -44,18 +44,29 @@ async def upload_document(
         os.makedirs(docs_dir, exist_ok=True)
     except OSError:
         docs_dir = os.path.join("/tmp", "uploads", "documents", str(app_id))
-        os.makedirs(docs_dir, exist_ok=True)
-    ext = file.filename.rsplit(".", 1)[-1] if "." in file.filename else "bin"
+        try:
+            os.makedirs(docs_dir, exist_ok=True)
+        except OSError:
+            pass
+
+    ext = file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else "bin"
     filename = f"{uuid.uuid4().hex}.{ext}"
     file_path = os.path.join(docs_dir, filename)
-    with open(file_path, "wb") as f:
-        f.write(content)
+    try:
+        with open(file_path, "wb") as f:
+            f.write(content)
+    except OSError:
+        pass
+
+    normalized_web_path = f"uploads/documents/{app_id}/{filename}"
 
     doc = Document(
         application_id=app_id,
         uploaded_by_user_id=current_user.id,
         document_type=document_type,
-        file_path=file_path,
+        file_path=normalized_web_path,
+        file_content=content,
+        file_extension=ext,
         status=DocumentStatus.PENDING,
     )
     db.add(doc)
@@ -79,13 +90,62 @@ def view_document(doc_id: int, db: Session = Depends(get_db),
         if owner_id != current_user.id:
             raise HTTPException(status_code=403, detail="Access denied")
 
-    if not os.path.exists(doc.file_path):
-        raise HTTPException(status_code=404, detail="File not found on disk")
+    # Determine extension and media type
+    ext = (doc.file_extension or (doc.file_path.rsplit(".", 1)[-1] if "." in doc.file_path else "pdf")).lower()
+    media_map = {
+        "pdf": "application/pdf",
+        "png": "image/png",
+        "jpg": "image/jpeg",
+        "jpeg": "image/jpeg",
+        "webp": "image/webp",
+    }
+    media_type = media_map.get(ext, "application/octet-stream")
+    clean_type = "".join(c for c in doc.document_type if c.isalnum() or c in (" ", "_", "-")).strip().replace(" ", "_")
+    safe_filename = f"{clean_type}_{doc.id}.{ext}"
 
-    media_type = "application/pdf" if doc.file_path.lower().endswith(".pdf") else None
-    return FileResponse(
-        doc.file_path,
-        media_type=media_type,
-        filename=os.path.basename(doc.file_path),
-        content_disposition_type="inline"
+    # 1. Direct serve from PostgreSQL database binary (works seamlessly on Vercel serverless!)
+    if doc.file_content:
+        return Response(
+            content=doc.file_content,
+            media_type=media_type,
+            headers={
+                "Content-Disposition": f'inline; filename="{safe_filename}"'
+            }
+        )
+
+    # 2. Check local disk or /tmp storage
+    raw_path = doc.file_path or ""
+    clean_path = raw_path.replace("\\", "/")
+    candidate_paths = [
+        raw_path,
+        clean_path,
+        os.path.join(settings.UPLOAD_DIR, clean_path.replace("uploads/", "")),
+        os.path.join("/tmp/uploads", clean_path.replace("uploads/", "")),
+        os.path.join("/tmp", clean_path),
+        os.path.abspath(raw_path),
+        os.path.abspath(clean_path),
+    ]
+
+    for p in candidate_paths:
+        if p and os.path.exists(p) and os.path.isfile(p):
+            # Backfill into DB so future requests on any container serve immediately
+            try:
+                with open(p, "rb") as f:
+                    file_bytes = f.read()
+                if file_bytes:
+                    doc.file_content = file_bytes
+                    doc.file_extension = ext
+                    db.commit()
+            except Exception:
+                pass
+            return FileResponse(
+                p,
+                media_type=media_type,
+                filename=safe_filename,
+                content_disposition_type="inline"
+            )
+
+    raise HTTPException(
+        status_code=404,
+        detail="Document file not found on disk. The file was stored in a temporary container. Please re-upload the document."
     )
