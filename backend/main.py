@@ -66,7 +66,7 @@ app.mount("/static", StaticFiles(directory="frontend/static"), name="static")
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 templates = Jinja2Templates(directory="frontend/templates")
-# Ensure all rendered HTML is served as UTF-8 (prevents â€" mojibake in browser)
+# Ensure all rendered HTML is served as UTF-8 (prevents em-dash mojibake in browser)
 templates.env.charset = "utf-8"
 
 # ── API Routers ──────────────────────────────────────────────
