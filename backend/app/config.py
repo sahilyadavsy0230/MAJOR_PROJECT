@@ -39,5 +39,9 @@ class Settings(BaseSettings):
 
 settings = Settings()
 
-os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
-os.makedirs(os.path.join(settings.UPLOAD_DIR, "letters"), exist_ok=True)
+try:
+    os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
+    os.makedirs(os.path.join(settings.UPLOAD_DIR, "letters"), exist_ok=True)
+except OSError:
+    # Serverless runtime (e.g. Vercel / AWS Lambda) has a read-only root filesystem
+    pass

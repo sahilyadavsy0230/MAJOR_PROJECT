@@ -115,3 +115,4 @@ Recommended alert thresholds:
 | `/health` Status | Non-200 for 1 minute | Non-200 for 3 minutes | Auto-restart container |
 | DB Connections | > 70 active | > 90 active | Scale pool or tune timeouts |
 | Disk Free (Backups) | < 20% remaining | < 10% remaining | Purge old backups |
+

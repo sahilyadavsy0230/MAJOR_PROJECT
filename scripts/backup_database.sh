@@ -49,3 +49,4 @@ echo "${LOG_PREFIX} Purging backups older than ${RETENTION_DAYS} days..."
 find "${BACKUP_DIR}" -name "${DB_NAME}_backup_*.sql.gz" -type f -mtime +"${RETENTION_DAYS}" -exec rm -v {} \;
 
 echo "${LOG_PREFIX} Daily backup pipeline completed successfully."
+

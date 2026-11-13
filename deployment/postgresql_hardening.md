@@ -104,3 +104,4 @@ nc -zv <YOUR_SERVER_PUBLIC_IP> 5432
 netstat -ano | grep 5432
 # Result MUST show: 127.0.0.1:5432 (NOT 0.0.0.0:5432)
 ```
+

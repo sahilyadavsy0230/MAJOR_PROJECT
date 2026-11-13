@@ -1,4 +1,4 @@
-﻿# ==============================================================================
+# ==============================================================================
 # PRASHANT GROUP WORKFORCE PLATFORM — WINDOWS POSTGRESQL AUTOMATED BACKUP
 # ==============================================================================
 # Register as daily task:
@@ -62,3 +62,4 @@ Get-ChildItem -Path $BackupDir -Filter "${DbName}_backup_*.sql" | Where-Object {
 }
 
 Write-Host "[$logTime] Daily backup job completed."
+

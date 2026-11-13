@@ -106,11 +106,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.mount("/static", StaticFiles(directory="frontend/static"), name="static")
-# Serve uploaded files (restricted access via API endpoints)
-app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+from pathlib import Path
 
-templates = Jinja2Templates(directory="frontend/templates")
+BASE_DIR = Path(__file__).resolve().parent.parent
+static_dir = BASE_DIR / "frontend" / "static"
+templates_dir = BASE_DIR / "frontend" / "templates"
+uploads_dir = Path("/tmp/uploads") if os.environ.get("VERCEL") else (BASE_DIR / "uploads")
+uploads_dir.mkdir(parents=True, exist_ok=True)
+
+app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
+# Serve uploaded files (restricted access via API endpoints)
+app.mount("/uploads", StaticFiles(directory=str(uploads_dir)), name="uploads")
+
+templates = Jinja2Templates(directory=str(templates_dir))
 # Ensure all rendered HTML is served as UTF-8 (prevents em-dash mojibake in browser)
 templates.env.charset = "utf-8"
 
@@ -132,6 +140,33 @@ app.include_router(worker_router,     prefix="/api/v1/worker",      tags=["Worke
 app.include_router(supervisor_router, prefix="/api/v1/supervisor",  tags=["Supervisor"])
 app.include_router(documents_router,  prefix="/api/v1/documents",   tags=["Documents"])
 app.include_router(contact_router,    prefix="/api/v1",             tags=["Contact"])
+
+# ── Auto Database Schema Initialization on Startup ──────────
+@app.on_event("startup")
+def init_db_tables():
+    try:
+        from backend.app.database.session import engine, Base, SessionLocal
+        import backend.app.models
+        Base.metadata.create_all(bind=engine)
+
+        db = SessionLocal()
+        from backend.app.models.user import User, UserRole
+        from backend.app.security.auth import get_password_hash
+        admin_email = "admin@prashantgroupindia.in"
+        admin = db.query(User).filter(User.email == admin_email).first()
+        if not admin:
+            admin = User(
+                email=admin_email,
+                hashed_password=get_password_hash("admin123"),
+                role=UserRole.ADMIN,
+                is_active=True
+            )
+            db.add(admin)
+            db.commit()
+            logger.info("Default admin user initialized successfully.")
+        db.close()
+    except Exception as e:
+        logger.warning(f"Database initialization warning: {e}")
 
 # ── Health & Monitoring Route (Dossier Section 5) ────────────
 @app.get("/health", tags=["Monitoring"])
