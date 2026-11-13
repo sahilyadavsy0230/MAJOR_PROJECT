@@ -108,3 +108,4 @@ def test_tc04_worker_complaint_lifecycle(client, admin_headers, db_session):
     assert res.status_code == 200
     complaints = res.json()
     assert isinstance(complaints, list)
+

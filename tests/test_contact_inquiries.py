@@ -49,3 +49,4 @@ def test_submit_contact_inquiry_validation_error(client):
     }
     res = client.post("/api/v1/contact", json=bad_payload)
     assert res.status_code in (400, 422)
+

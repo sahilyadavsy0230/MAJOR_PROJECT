@@ -27,6 +27,7 @@ jobs:
           --health-retries 5
 
     env:
+      PYTHONPATH: .
       ENVIRONMENT: testing
       DATABASE_URL: postgresql+psycopg2://postgres:postgres123@localhost:5432/prashant_group
       SECRET_KEY: test-secret-key-at-least-32-bytes-long-for-ci
@@ -59,4 +60,5 @@ jobs:
 
       - name: Stage 3 — Run Automated QA Test Suite (Pytest)
         run: |
-          pytest tests/ -v --tb=short
+          python -m pytest tests/ -v --tb=short
+
