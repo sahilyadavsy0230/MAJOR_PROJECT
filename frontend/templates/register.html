@@ -317,7 +317,15 @@ document.getElementById('candidateRegisterForm').addEventListener('submit', asyn
       body: formData
     });
 
-    const resData = await response.json();
+    let resData = null;
+    const contentType = response.headers.get("content-type") || "";
+    if (contentType.includes("application/json")) {
+      resData = await response.json();
+    } else {
+      const text = await response.text();
+      resData = { detail: text || `Server error (${response.status})` };
+    }
+
     if (response.ok) {
       alertEl.className = 'pg-alert pg-alert-success';
       alertEl.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i> Registration successful! Redirecting to login...';
@@ -332,8 +340,9 @@ document.getElementById('candidateRegisterForm').addEventListener('submit', asyn
       alertEl.classList.remove('d-none');
     }
   } catch (err) {
+    console.error('Registration submission error:', err);
     alertEl.className = 'pg-alert pg-alert-error';
-    alertEl.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-2"></i> Server communication error. Please try again.';
+    alertEl.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-2"></i> ' + (err.message || 'Server communication error. Please try again.');
     alertEl.classList.remove('d-none');
   } finally {
     btn.disabled = false;

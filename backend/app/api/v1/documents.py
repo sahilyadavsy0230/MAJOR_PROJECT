@@ -40,7 +40,11 @@ async def upload_document(
         raise HTTPException(status_code=400, detail=f"File too large (max {settings.MAX_FILE_SIZE_MB}MB)")
 
     docs_dir = os.path.join(settings.UPLOAD_DIR, "documents", str(app_id))
-    os.makedirs(docs_dir, exist_ok=True)
+    try:
+        os.makedirs(docs_dir, exist_ok=True)
+    except OSError:
+        docs_dir = os.path.join("/tmp", "uploads", "documents", str(app_id))
+        os.makedirs(docs_dir, exist_ok=True)
     ext = file.filename.rsplit(".", 1)[-1] if "." in file.filename else "bin"
     filename = f"{uuid.uuid4().hex}.{ext}"
     file_path = os.path.join(docs_dir, filename)

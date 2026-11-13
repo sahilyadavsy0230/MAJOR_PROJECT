@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     # SQLite (offline fallback only): sqlite:///./prashant_group.db
     DATABASE_URL: str = "postgresql+psycopg2://postgres:postgres123@localhost:5432/prashant_group"
     ALLOWED_ORIGINS: list[str] = ["*"]
-    UPLOAD_DIR: str = "uploads"
+    UPLOAD_DIR: str = "/tmp/uploads" if (os.environ.get("VERCEL") or not os.access(".", os.W_OK)) else "uploads"
     MAX_FILE_SIZE_MB: int = 10
 
     # SMTP Configuration (Gmail SMTP by default)

@@ -30,7 +30,12 @@ def _save_upload(upload: UploadFile, subfolder: str, max_mb: int = 10, allowed_t
     if len(content) > max_mb * 1024 * 1024:
         raise HTTPException(status_code=400, detail=f"File {upload.filename} too large (max {max_mb} MB)")
     save_dir = os.path.join(settings.UPLOAD_DIR, subfolder)
-    os.makedirs(save_dir, exist_ok=True)
+    try:
+        os.makedirs(save_dir, exist_ok=True)
+    except OSError:
+        # Fallback for serverless environments (Vercel / AWS Lambda where root is read-only)
+        save_dir = os.path.join("/tmp", "uploads", subfolder)
+        os.makedirs(save_dir, exist_ok=True)
     ext = upload.filename.rsplit(".", 1)[-1] if "." in upload.filename else "bin"
     filename = f"{uuid.uuid4().hex}.{ext}"
     file_path = os.path.join(save_dir, filename)
@@ -128,7 +133,11 @@ async def register_candidate(
     # ── Save mandatory doc files to permanent location ─────────
     def move_to_permanent(temp_path: str, user_id: int, doc_label: str) -> str:
         perm_dir = os.path.join(settings.UPLOAD_DIR, "documents", f"user_{user_id}")
-        os.makedirs(perm_dir, exist_ok=True)
+        try:
+            os.makedirs(perm_dir, exist_ok=True)
+        except OSError:
+            perm_dir = os.path.join("/tmp", "uploads", "documents", f"user_{user_id}")
+            os.makedirs(perm_dir, exist_ok=True)
         ext = temp_path.rsplit(".", 1)[-1]
         fname = f"{doc_label}_{uuid.uuid4().hex[:8]}.{ext}"
         new_path = os.path.join(perm_dir, fname)
